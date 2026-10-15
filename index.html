@@ -51,7 +51,6 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 </div></div>
 
 <script>
-// आपका नया वर्कर URL जो सभी CORS और Headers को हैंडल करेगा
 const PROXY_URL = "https://proplayer.allswbatch22.workers.dev/?url=";
 
 const v = document.getElementById("video"), input = document.getElementById("url");
@@ -60,13 +59,30 @@ let hls = null;
 
 function say(t, e=false){ msg.textContent = t; msg.style.color = e ? "#ff9696" : "#98a4b6"; }
 
-// Universal Proxy Loader - यह प्लेयर की हर रिक्वेस्ट को आपके Worker पर भेज देगा
+// Advanced Proxy Loader - Extracts Token and applies it to all segments
 class ProxyLoader extends Hls.DefaultConfig.loader {
     load(context, config, callbacks) {
-        // अगर URL में पहले से वर्कर का लिंक नहीं है, तो उसे वर्कर के पीछे लगा दें
-        if (!context.url.startsWith("https://proplayer.allswbatch22.workers.dev")) {
-            context.url = PROXY_URL + encodeURIComponent(context.url);
+        let originalUrl = context.url;
+        let mainUrl = input.value.trim();
+
+        // 1. Extract token from main URL
+        let token = "";
+        if (mainUrl.includes("edge-cache-token=")) {
+            token = "edge-cache-token=" + mainUrl.split("edge-cache-token=")[1];
         }
+
+        // 2. Append token to segment/playlist URL if missing
+        if (token && !originalUrl.includes("edge-cache-token=")) {
+            originalUrl += (originalUrl.includes("?") ? "&" : "?") + token;
+        }
+
+        // 3. Send through Cloudflare Worker
+        if (!originalUrl.startsWith("https://proplayer.allswbatch22.workers.dev")) {
+            context.url = PROXY_URL + encodeURIComponent(originalUrl);
+        } else {
+            context.url = originalUrl;
+        }
+
         super.load(context, config, callbacks);
     }
 }
@@ -85,12 +101,11 @@ function start() {
   say(`Proxy के ज़रिए स्ट्रीम लोड हो रही है...`);
 
   if (Hls.isSupported()) {
-    // HLS.js कॉन्फ़िगरेशन - सभी फाइलों के लिए हमारा ProxyLoader यूज़ होगा
     hls = new Hls({
       maxBufferLength: 30,
-      loader: ProxyLoader, // Main Loader Override
-      pLoader: ProxyLoader, // Playlist Loader Override
-      fLoader: ProxyLoader // Fragment Loader Override
+      loader: ProxyLoader,
+      pLoader: ProxyLoader,
+      fLoader: ProxyLoader
     });
     
     hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(rawUrl); });
@@ -105,6 +120,7 @@ function start() {
             say("❌ Manifest Load Error! वर्कर सर्वर तक नहीं पहुँच पा रहा है या टोकन एक्सपायर हो गया है।", true);
             hls.destroy();
         } else if(data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            say("⚠️ Media Error... Recovering...", true);
             hls.recoverMediaError();
         }
       }
@@ -115,7 +131,6 @@ function start() {
   }
 }
 
-// डाउनलोडर भी अब वर्कर के ज़रिए काम करेगा
 async function downloadMerged(){
  const rawUrl=input.value.trim();
  if(!rawUrl){say("❌ पहले valid HLS URL डालें।",true);return;}
@@ -134,11 +149,21 @@ async function downloadMerged(){
 
   let downloadedBuffers = [];
   let total = fragments.length;
+  
+  let mainUrl = input.value.trim();
+  let token = "";
+  if (mainUrl.includes("edge-cache-token=")) {
+      token = "edge-cache-token=" + mainUrl.split("edge-cache-token=")[1];
+  }
 
   for(let i=0; i<total; i++){
       text.textContent=`Downloading segment: ${i+1} / ${total}`;
       let segUrl = fragments[i].url; 
-      // डाउनलोड करते समय भी URL को वर्कर के ज़रिए भेजना
+      
+      if (token && !segUrl.includes("edge-cache-token=")) {
+          segUrl += (segUrl.includes("?") ? "&" : "?") + token;
+      }
+
       if (!segUrl.startsWith("https://proplayer.allswbatch22.workers.dev")) {
           segUrl = PROXY_URL + encodeURIComponent(segUrl);
       }
