@@ -50,10 +50,10 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 </div></div>
 
 <script>
-// 🚀 Yeh automatically aapke Cloudflare Worker domain ko detect kar lega ya aap yahan apna worker URL daal sakte hain
-const WORKER_BASE = "https://proplayer.probrosystemset.workers.dev"; // Agar aapka worker yhi hai toh yeh auto-fetch karega
-const PROXY = WORKER_BASE + "/proxy?url=";
-const SEGMENT = WORKER_BASE + "/segment?url=";
+// 🚀 Automatically current domain ko hi proxy base bana lega (Worker aur Player ek sath connect ho jayenge)
+const WORKER_BASE = window.location.origin; 
+const PROXY = WORKER_BASE + "/?url=";
+const SEGMENT = WORKER_BASE + "/?url=";
 
 const v=document.getElementById("video"), input=document.getElementById("url");
 const msg=document.getElementById("msg"), status=document.getElementById("status");
@@ -65,7 +65,6 @@ function valid(u){try{return["http:","https:"].includes(new URL(u).protocol)}cat
 function manifest(u){
  try{
   const x=new URL(u);
-  if(x.hostname.includes("workers.dev")&&x.searchParams.has("url"))return u;
   if(x.pathname.toLowerCase().includes(".m3u8"))return PROXY+encodeURIComponent(u);
  }catch{}
  return u;
@@ -121,7 +120,7 @@ async function downloadMerged(){
   if (fragments[0].initSegment) {
       text.textContent = "Downloading Init Segment (Video Header)...";
       let initUrl = fragments[0].initSegment.url;
-      if(!initUrl.includes("workers.dev")) initUrl = SEGMENT + encodeURIComponent(initUrl);
+      if(!initUrl.includes(window.location.host)) initUrl = SEGMENT + encodeURIComponent(initUrl);
       
       let res = await fetch(initUrl);
       if(!res.ok) throw new Error("Init Segment HTTP " + res.status);
@@ -132,7 +131,7 @@ async function downloadMerged(){
       text.textContent=`Downloading segment: ${i+1} / ${total}`;
       let segUrl = fragments[i].url; 
       
-      if(!segUrl.includes("workers.dev")) {
+      if(!segUrl.includes(window.location.host)) {
           segUrl = SEGMENT + encodeURIComponent(segUrl);
       }
       
