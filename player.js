@@ -2,8 +2,10 @@
 // RWA ADVANCED HLS PLAYER & DOWNLOADER ENGINE (player.js)
 // =========================================================
 // Termux Bridge Server URL
-const PROXY = "http://127.0.0.1:8080/proxy?url=";
-const SEGMENT = "http://127.0.0.1:8080/proxy?url=";
+const PROXY = "https://problems-attention-answer-sacramento.trycloudflare.com
+/proxy?url=";
+const SEGMENT = "https://problems-attention-answer-sacramento.trycloudflare.com
+/proxy?url=";
 const v = document.getElementById("video");
 const input = document.getElementById("url");
 const msg = document.getElementById("msg");
