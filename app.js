@@ -10,7 +10,7 @@ let CFG = {
 };
 
 const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
-const WORKER_PROXY = "https://proplayer.probrosystemset.workers.dev/proxy?url=";
+const WORKER_PROXY = "http://127.0.0.1:8080/proxy?url=";
 
 function decryptAppX(encStr) {
     if (!encStr || typeof encStr !== "string") return "";
