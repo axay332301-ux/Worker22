@@ -1,77 +1,57 @@
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const targetUrl = url.searchParams.get("url");
-
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS, RANGE",
-      "Access-Control-Allow-Headers": "*",
-      "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
-    };
-
+    // 1. Handle CORS Preflight (OPTIONS request) - ताकि ब्राउज़र ब्लॉक न करे
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
-    }
-
-    if (!targetUrl) {
-      return new Response("Missing URL parameter", { status: 400, headers: corsHeaders });
-    }
-
-    // Python bot wale exact referers jo har tarah ke security block ko bypass karte hain[span_1](start_span)[span_1](end_span)
-    const referers = [
-      "https://classx.co.in/",
-      "https://rozgarapinew.teachx.in/",
-      "https://web.classplusapp.com/",
-      "https://www.youtube.com/"
-    ];
-
-    const userAgent = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
-
-    // Client se aane wala Range header (video seeking aur chunks ke liye zaroori hai)
-    const clientRange = request.headers.get("Range");
-
-    let response = null;
-    let lastError = null;
-
-    for (let ref of referers) {
-      try {
-        const fetchHeaders = {
-          "User-Agent": userAgent,
-          "Referer": ref,
-          "Origin": ref.slice(0, -1),
-          "Accept": "*/*"
-        };
-
-        if (clientRange) {
-          fetchHeaders["Range"] = clientRange;
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "*",
+          "Access-Control-Max-Age": "86400",
         }
-
-        response = await fetch(targetUrl, { 
-          headers: fetchHeaders, 
-          redirect: "follow" 
-        });
-
-        if (response.ok || response.status === 206) {
-          break;
-        }
-      } catch (err) {
-        lastError = err;
-      }
-    }
-
-    if (!response || (!response.ok && response.status !== 206)) {
-      return new Response(`Proxy fetch failed: ${lastError ? lastError.message : (response ? response.status : 'Unknown error')}`, {
-        status: 502,
-        headers: corsHeaders
       });
     }
 
-    const newResponse = new Response(response.body, response);
-    Object.keys(corsHeaders).forEach(key => {
-      newResponse.headers.set(key, corsHeaders[key]);
-    });
+    const url = new URL(request.url);
+    const targetUrl = url.searchParams.get("url");
 
-    return newResponse;
+    if (!targetUrl) {
+      return new Response("Error: URL parameter is missing. Example: ?url=https://example.com/video.m3u8", { status: 400 });
+    }
+
+    // 2. Hardcoded Secure Headers (आपके बताए हुए)
+    const modifiedHeaders = new Headers();
+    modifiedHeaders.set("sec-ch-ua", '"Chromium";v="154", "Android WebView";v="154", "Not A(Brand";v="99"');
+    modifiedHeaders.set("sec-ch-ua-mobile", "?1");
+    modifiedHeaders.set("Accept", "*/*");
+    modifiedHeaders.set("sec-ch-ua-platform", '"Android"');
+    modifiedHeaders.set("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+    
+    // Origin और Referer को खाली (blank) रखना है
+    modifiedHeaders.set("Origin", "");
+    modifiedHeaders.set("Referer", "");
+
+    try {
+      // 3. Akamai/Target Server को रिक्वेस्ट भेजें
+      const targetResponse = await fetch(targetUrl, {
+        method: request.method,
+        headers: modifiedHeaders,
+        redirect: "follow"
+      });
+
+      // 4. Response Headers को मॉडिफाई करें ताकि ब्राउज़र वीडियो प्ले कर सके
+      const responseHeaders = new Headers(targetResponse.headers);
+      responseHeaders.set("Access-Control-Allow-Origin", "*");
+      responseHeaders.set("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
+      responseHeaders.set("Access-Control-Allow-Headers", "*");
+
+      return new Response(targetResponse.body, {
+        status: targetResponse.status,
+        statusText: targetResponse.statusText,
+        headers: responseHeaders
+      });
+    } catch (e) {
+      return new Response("Worker Fetch Error: " + e.message, { status: 500 });
+    }
   }
 };
