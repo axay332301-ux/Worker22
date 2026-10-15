@@ -27,7 +27,7 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 <div class="top"><div class="logo">▶ Secured API Player</div><div id="status" class="status">Ready</div></div>
 <div class="card">
 <div class="form">
-<input id="url" type="text" placeholder="https://rozgarapinew.teachx.in/... .m3u8 URL डालें">
+<input id="url" type="text" placeholder="HLS .m3u8 URL डालें (teachx.in / classx.co.in)">
 <label class="proxy-toggle"><input type="checkbox" id="useProxy" checked> Proxy</label>
 <button id="load" class="primary">PLAY</button>
 </div>
@@ -45,7 +45,7 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 </div>
 </div>
 
-<div id="msg" class="msg">सिर्फ rozgarapinew.teachx.in के लिंक्स ही सपोर्टेड हैं।</div>
+<div id="msg" class="msg">सिर्फ teachx.in और classx.co.in के लिंक्स ही सपोर्टेड हैं।</div>
 <div id="downloadBox" class="progressBox">
 <div id="downloadText" class="msg">Preparing…</div>
 <div class="bar"><i id="bar"></i></div>
@@ -57,18 +57,21 @@ const WORKER_BASE = "https://proplayer.probrosystemset.workers.dev";
 const PROXY = WORKER_BASE + "/proxy?url=";
 const SEGMENT = WORKER_BASE + "/segment?url=";
 
-// 1. Domain Restriction Lock (सिर्फ यही API चलेगी)
-const ALLOWED_API = "https://rozgarapinew.teachx.in";
+// 1. Domain Restriction Lock (अब दोनों डोमेन अलाउड हैं)
+const ALLOWED_DOMAINS = [
+  "https://rozgarapinew.teachx.in",
+  "https://transcoded-videos.classx.co.in"
+];
 
 // 2. Hardcoded Secure Headers
 const customHeaders = {
-    "Origin": "https://appx-play.akamai.net.in",
+    "Origin": "",
     "sec-ch-ua": '"Chromium";v="154", "Android WebView";v="154", "Not A(Brand";v="99"',
     "sec-ch-ua-mobile": "?1",
     "Accept": "*/*",
     "sec-ch-ua-platform": '"Android"',
     "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36",
-    "Referer": "https://appx-play.akamai.net.in/"
+    "Referer": ""
 };
 
 const v = document.getElementById("video"), input = document.getElementById("url");
@@ -78,14 +81,15 @@ let hls = null;
 
 function say(t, e=false){ msg.textContent = t; msg.style.color = e ? "#ff9696" : "#98a4b6"; }
 
-// URL Validation Function (अब यह API को भी चेक करेगा)
+// URL Validation Function (मल्टीपल डोमेन चेक)
 function valid(u) {
   try {
     const urlObj = new URL(u);
     if (!["http:", "https:"].includes(urlObj.protocol)) return false;
-    // अगर URL ALLOWED_API से शुरू नहीं होता है, तो false रिटर्न करे
-    if (!urlObj.href.startsWith(ALLOWED_API)) return false;
-    return true;
+    
+    // चेक करें कि URL अलाउड लिस्ट में से किसी एक डोमेन से शुरू होता है या नहीं
+    let isAllowed = ALLOWED_DOMAINS.some(domain => urlObj.href.startsWith(domain));
+    return isAllowed;
   } catch {
     return false;
   }
@@ -122,7 +126,7 @@ function stop(){
 function start() {
   let raw = input.value.trim();
   if(!valid(raw)){ 
-    say("❌ Invalid URL! यह प्लेयर सिर्फ 'https://rozgarapinew.teachx.in' के लिंक्स प्ले कर सकता है।", true); 
+    say("❌ Invalid URL! यह प्लेयर सिर्फ आपके सिक्योर डोमेन्स के लिंक्स प्ले कर सकता है।", true); 
     return; 
   }
   
@@ -174,7 +178,7 @@ function start() {
 async function downloadMerged(){
  const raw=input.value.trim();
  if(!valid(raw)){ 
-   say("❌ Invalid URL! सिर्फ 'https://rozgarapinew.teachx.in' के लिंक्स अलाउड हैं।", true); 
+   say("❌ Invalid URL! सिर्फ आपके डोमेन्स के लिंक्स अलाउड हैं।", true); 
    return; 
  }
  if(!hls || !hls.levels || hls.levels.length === 0 || !hls.levels[hls.currentLevel >= 0 ? hls.currentLevel : 0]?.details) {
