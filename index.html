@@ -50,10 +50,10 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 </div></div>
 
 <script>
-// Yahan apne Worker22 ka live URL daal dein
-const WORKER_BASE = "https://worker22.axay332301.workers.dev"; 
-const PROXY = WORKER_BASE + "/proxy?url=";[span_1](start_span)[span_1](end_span)
-const SEGMENT = WORKER_BASE + "/segment?url=";[span_2](start_span)[span_2](end_span)
+// 🚀 Yeh automatically aapke Cloudflare Worker domain ko detect kar lega ya aap yahan apna worker URL daal sakte hain
+const WORKER_BASE = "https://proplayer.probrosystemset.workers.dev"; // Agar aapka worker yhi hai toh yeh auto-fetch karega
+const PROXY = WORKER_BASE + "/proxy?url=";
+const SEGMENT = WORKER_BASE + "/segment?url=";
 
 const v=document.getElementById("video"), input=document.getElementById("url");
 const msg=document.getElementById("msg"), status=document.getElementById("status");
@@ -66,130 +66,130 @@ function manifest(u){
  try{
   const x=new URL(u);
   if(x.hostname.includes("workers.dev")&&x.searchParams.has("url"))return u;
-  if(x.pathname.toLowerCase().includes(".m3u8"))return PROXY+encodeURIComponent(u);[span_3](start_span)[span_3](end_span)
+  if(x.pathname.toLowerCase().includes(".m3u8"))return PROXY+encodeURIComponent(u);
  }catch{}
  return u;
 }
-function segment(u){return /\.(ts|m4s|mp4|aac|mp3|vtt|webvtt)(\?|$)/i.test(u.split("?")[0])}[span_4](start_span)[span_4](end_span)
+function segment(u){return /\.(ts|m4s|mp4|aac|mp3|vtt|webvtt)(\?|$)/i.test(u.split("?")[0])}
 
 class BackendLoader extends Hls.DefaultConfig.loader{
  load(ctx,cfg,cb){
-  if(segment(ctx.url))ctx.url=SEGMENT+encodeURIComponent(ctx.url);[span_5](start_span)[span_5](end_span)
+  if(segment(ctx.url))ctx.url=SEGMENT+encodeURIComponent(ctx.url);
   super.load(ctx,cfg,cb);
  }
 }
 
-function stop(){if(hls){try{hls.destroy()}catch{}hls=null}v.pause();v.removeAttribute("src");v.load()}[span_6](start_span)[span_6](end_span)
+function stop(){if(hls){try{hls.destroy()}catch{}hls=null}v.pause();v.removeAttribute("src");v.load()}
 function start(){
- let raw=input.value.trim();if(!valid(raw)){say("Valid URL डालें।",true);return}[span_7](start_span)[span_7](end_span)
- stop();let src=manifest(raw);status.textContent="Loading…";say("Manifest loading…");[span_8](start_span)[span_8](end_span)
- if(Hls.isSupported()){[span_9](start_span)[span_9](end_span)
-  hls=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:30,maxBufferLength:20,loader:BackendLoader});[span_10](start_span)[span_10](end_span)
-  hls.on(Hls.Events.MEDIA_ATTACHED,()=>hls.loadSource(src));[span_11](start_span)[span_11](end_span)
-  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent="Ready";say("Stream ready.");v.play().catch(()=>{})});[span_12](start_span)[span_12](end_span)
-  hls.on(Hls.Events.ERROR,(_,d)=>{if(d.fatal){status.textContent="Error";say("HLS error: "+(d.details||"unknown"),true);if(d.type===Hls.ErrorTypes.MEDIA_ERROR)try{hls.recoverMediaError()}catch{}}});[span_13](start_span)[span_13](end_span)
-  hls.attachMedia(v);[span_14](start_span)[span_14](end_span)
- }else if(v.canPlayType("application/vnd.apple.mpegurl")){v.src=src;v.onloadedmetadata=()=>{status.textContent="Ready";v.play().catch(()=>{})}}[span_15](start_span)[span_15](end_span)
- else say("इस browser में HLS supported नहीं है।",true);[span_16](start_span)[span_16](end_span)
+ let raw=input.value.trim();if(!valid(raw)){say("Valid URL डालें।",true);return}
+ stop();let src=manifest(raw);status.textContent="Loading…";say("Manifest loading…");
+ if(Hls.isSupported()){
+  hls=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:30,maxBufferLength:20,loader:BackendLoader});
+  hls.on(Hls.Events.MEDIA_ATTACHED,()=>hls.loadSource(src));
+  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent="Ready";say("Stream ready.");v.play().catch(()=>{})});
+  hls.on(Hls.Events.ERROR,(_,d)=>{if(d.fatal){status.textContent="Error";say("HLS error: "+(d.details||"unknown"),true);if(d.type===Hls.ErrorTypes.MEDIA_ERROR)try{hls.recoverMediaError()}catch{}}});
+  hls.attachMedia(v);
+ }else if(v.canPlayType("application/vnd.apple.mpegurl")){v.src=src;v.onloadedmetadata=()=>{status.textContent="Ready";v.play().catch(()=>{})}}
+ else say("इस browser में HLS supported नहीं है।",true);
 }
 
 async function downloadMerged(){
  const raw=input.value.trim();
- if(!valid(raw)){say("पहले valid HLS URL डालें।",true);return;}[span_17](start_span)[span_17](end_span)
+ if(!valid(raw)){say("पहले valid HLS URL डालें।",true);return;}
 
- if(!hls || !hls.levels || hls.levels.length === 0 || !hls.levels[hls.currentLevel >= 0 ? hls.currentLevel : 0]?.details) {[span_18](start_span)[span_18](end_span)
-     say("⚠️ कृपया पहले 'PLAY' बटन दबाएं, जब वीडियो प्ले होने लगे तब Download पर क्लिक करें।", true);[span_19](start_span)[span_19](end_span)
+ if(!hls || !hls.levels || hls.levels.length === 0 || !hls.levels[hls.currentLevel >= 0 ? hls.currentLevel : 0]?.details) {
+     say("⚠️ कृपया पहले 'PLAY' बटन दबाएं, जब वीडियो प्ले होने लगे तब Download पर क्लिक करें।", true);
      return;
  }
 
- const box=document.getElementById("downloadBox"), text=document.getElementById("downloadText"), bar=document.getElementById("bar");[span_20](start_span)[span_20](end_span)
- box.classList.add("show");[span_21](start_span)[span_21](end_span)
- bar.style.width="2%";[span_22](start_span)[span_22](end_span)
- text.textContent="HLS Player से 100% सही लिंक्स प्राप्त कर रहे हैं...";[span_23](start_span)[span_23](end_span)
- status.textContent="Downloading…";[span_24](start_span)[span_24](end_span)
+ const box=document.getElementById("downloadBox"), text=document.getElementById("downloadText"), bar=document.getElementById("bar");
+ box.classList.add("show");
+ bar.style.width="2%";
+ text.textContent="HLS Player से 100% सही लिंक्स प्राप्त कर रहे हैं...";
+ status.textContent="Downloading…";
 
  try{
-  let levelIndex = hls.currentLevel >= 0 ? hls.currentLevel : 0;[span_25](start_span)[span_25](end_span)
-  let level = hls.levels[levelIndex];[span_26](start_span)[span_26](end_span)
-  let fragments = level.details.fragments;[span_27](start_span)[span_27](end_span)
+  let levelIndex = hls.currentLevel >= 0 ? hls.currentLevel : 0;
+  let level = hls.levels[levelIndex];
+  let fragments = level.details.fragments;
   
-  if(!fragments || fragments.length === 0) throw new Error("इस वीडियो में कोई segments नहीं मिले!");[span_28](start_span)[span_28](end_span)
+  if(!fragments || fragments.length === 0) throw new Error("इस वीडियो में कोई segments नहीं मिले!");
 
-  let downloadedBuffers = [];[span_29](start_span)[span_29](end_span)
-  let total = fragments.length;[span_30](start_span)[span_30](end_span)
+  let downloadedBuffers = [];
+  let total = fragments.length;
 
-  if (fragments[0].initSegment) {[span_31](start_span)[span_31](end_span)
-      text.textContent = "Downloading Init Segment (Video Header)...";[span_32](start_span)[span_32](end_span)
-      let initUrl = fragments[0].initSegment.url;[span_33](start_span)[span_33](end_span)
-      if(!initUrl.includes("workers.dev")) initUrl = SEGMENT + encodeURIComponent(initUrl);[span_34](start_span)[span_34](end_span)
+  if (fragments[0].initSegment) {
+      text.textContent = "Downloading Init Segment (Video Header)...";
+      let initUrl = fragments[0].initSegment.url;
+      if(!initUrl.includes("workers.dev")) initUrl = SEGMENT + encodeURIComponent(initUrl);
       
-      let res = await fetch(initUrl);[span_35](start_span)[span_35](end_span)
-      if(!res.ok) throw new Error("Init Segment HTTP " + res.status);[span_36](start_span)[span_36](end_span)
-      downloadedBuffers.push(await res.arrayBuffer());[span_37](start_span)[span_37](end_span)
+      let res = await fetch(initUrl);
+      if(!res.ok) throw new Error("Init Segment HTTP " + res.status);
+      downloadedBuffers.push(await res.arrayBuffer());
   }
 
-  for(let i=0; i<total; i++){[span_38](start_span)[span_38](end_span)
-      text.textContent=`Downloading segment: ${i+1} / ${total}`;[span_39](start_span)[span_39](end_span)
-      let segUrl = fragments[i].url;[span_40](start_span)[span_40](end_span)
+  for(let i=0; i<total; i++){
+      text.textContent=`Downloading segment: ${i+1} / ${total}`;
+      let segUrl = fragments[i].url; 
       
-      if(!segUrl.includes("workers.dev")) {[span_41](start_span)[span_41](end_span)
-          segUrl = SEGMENT + encodeURIComponent(segUrl);[span_42](start_span)[span_42](end_span)
+      if(!segUrl.includes("workers.dev")) {
+          segUrl = SEGMENT + encodeURIComponent(segUrl);
       }
       
-      let segRes = await fetch(segUrl);[span_43](start_span)[span_43](end_span)
-      if(!segRes.ok) {[span_44](start_span)[span_44](end_span)
-          throw new Error(`Segment ${i+1} HTTP Error ${segRes.status}`);[span_45](start_span)[span_45](end_span)
+      let segRes = await fetch(segUrl);
+      if(!segRes.ok) {
+          throw new Error(`Segment ${i+1} HTTP Error ${segRes.status}`);
       }
       
-      let buffer = await segRes.arrayBuffer();[span_46](start_span)[span_46](end_span)
-      downloadedBuffers.push(buffer);[span_47](start_span)[span_47](end_span)
+      let buffer = await segRes.arrayBuffer();
+      downloadedBuffers.push(buffer);
       
-      let percent = Math.round(((i + 1) / total) * 100);[span_48](start_span)[span_48](end_span)
-      bar.style.width = percent + "%";[span_49](start_span)[span_49](end_span)
+      let percent = Math.round(((i + 1) / total) * 100);
+      bar.style.width = percent + "%";
   }
 
-  text.textContent="सभी segments merge हो रहे हैं, कृपया प्रतीक्षा करें…";[span_50](start_span)[span_50](end_span)
+  text.textContent="सभी segments merge हो रहे हैं, कृपया प्रतीक्षा करें…";
   
-  const blob = new Blob(downloadedBuffers, {type: "video/mp4"});[span_51](start_span)[span_51](end_span)
-  const finalUrl = URL.createObjectURL(blob);[span_52](start_span)[span_52](end_span)
+  const blob = new Blob(downloadedBuffers, {type: "video/mp4"});
+  const finalUrl = URL.createObjectURL(blob);
   
-  const a = document.createElement("a");[span_53](start_span)[span_53](end_span)
-  a.href = finalUrl;[span_54](start_span)[span_54](end_span)
-  a.download = `Downloaded_Video_${Math.floor(Math.random()*10000)}.mp4`;[span_55](start_span)[span_55](end_span)
-  document.body.appendChild(a);[span_56](start_span)[span_56](end_span)
-  a.click();[span_57](start_span)[span_57](end_span)
-  a.remove();[span_58](start_span)[span_58](end_span)
+  const a = document.createElement("a");
+  a.href = finalUrl;
+  a.download = `Downloaded_Video_${Math.floor(Math.random()*10000)}.mp4`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   
-  setTimeout(()=> URL.revokeObjectURL(finalUrl), 60000);[span_59](start_span)[span_59](end_span)
+  setTimeout(()=> URL.revokeObjectURL(finalUrl), 60000);
   
-  bar.style.width="100%";[span_60](start_span)[span_60](end_span)
-  text.textContent="Download पूरा हुआ!";[span_61](start_span)[span_61](end_span)
-  status.textContent="Ready";[span_62](start_span)[span_62](end_span)
-  say("Video सफलतापूर्वक merge और download हो गई है।");[span_63](start_span)[span_63](end_span)
+  bar.style.width="100%";
+  text.textContent="Download पूरा हुआ!";
+  status.textContent="Ready";
+  say("Video सफलतापूर्वक merge और download हो गई है।");
 
  }catch(e){
-  bar.style.width="0";[span_64](start_span)[span_64](end_span)
-  status.textContent="Download error";[span_65](start_span)[span_65](end_span)
-  text.textContent=e.message;[span_66](start_span)[span_66](end_span)
-  say("Download failed: "+e.message, true);[span_67](start_span)[span_67](end_span)
-  console.error(e);[span_68](start_span)[span_68](end_span)
+  bar.style.width="0";
+  status.textContent="Download error";
+  text.textContent=e.message;
+  say("Download failed: "+e.message, true);
+  console.error(e);
  }
 }
 
-function fmt(x){if(!Number.isFinite(x))return"00:00";x=Math.floor(x);let h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return h?`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}[span_69](start_span)[span_69](end_span)
-document.getElementById("load").onclick=start;input.onkeydown=e=>{if(e.key==="Enter")start()};[span_70](start_span)[span_70](end_span)
-document.getElementById("toggle").onclick=()=>v.paused?v.play():v.pause();[span_71](start_span)[span_71](end_span)
-v.onplay=()=>document.getElementById("toggle").textContent="⏸";v.onpause=()=>document.getElementById("toggle").textContent="▶";[span_72](start_span)[span_72](end_span)
-document.getElementById("back").onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);[span_73](start_span)[span_73](end_span)
-document.getElementById("next").onclick=()=>v.currentTime=Math.min(v.duration||Infinity,v.currentTime+10);[span_74](start_span)[span_74](end_span)
-document.getElementById("mute").onclick=()=>{v.muted=!v.muted;document.getElementById("mute").textContent=v.muted?"🔇":"🔊"};[span_75](start_span)[span_75](end_span)
-document.getElementById("speed").onchange=e=>v.playbackRate=+e.target.value;[span_76](start_span)[span_76](end_span)
-document.getElementById("download").onclick=downloadMerged;[span_77](start_span)[span_77](end_span)
-document.getElementById("pip").onclick=async()=>{try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else await v.requestPictureInPicture()}catch{}};[span_78](start_span)[span_78](end_span)
-document.getElementById("fs").onclick=async()=>{try{if(!document.fullscreenElement)await document.querySelector(".screen").requestFullscreen();else await document.exitFullscreen()}catch{}};[span_79](start_span)[span_79](end_span)
-v.ontimeupdate=()=>{let d=v.duration;if(Number.isFinite(d)&&d>0)document.getElementById("seek").value=v.currentTime/d*1000;document.getElementById("time").textContent=fmt(v.currentTime)+" / "+fmt(d)};[span_80](start_span)[span_80](end_span)
-document.getElementById("seek").oninput=e=>{if(Number.isFinite(v.duration))v.currentTime=e.target.value/1000*v.duration};[span_81](start_span)[span_81](end_span)
-v.onwaiting=()=>status.textContent="Buffering…";v.onplaying=()=>status.textContent="Playing";v.onended=()=>status.textContent="Ended";[span_82](start_span)[span_82](end_span)
+function fmt(x){if(!Number.isFinite(x))return"00:00";x=Math.floor(x);let h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return h?`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
+document.getElementById("load").onclick=start;input.onkeydown=e=>{if(e.key==="Enter")start()};
+document.getElementById("toggle").onclick=()=>v.paused?v.play():v.pause();
+v.onplay=()=>document.getElementById("toggle").textContent="⏸";v.onpause=()=>document.getElementById("toggle").textContent="▶";
+document.getElementById("back").onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
+document.getElementById("next").onclick=()=>v.currentTime=Math.min(v.duration||Infinity,v.currentTime+10);
+document.getElementById("mute").onclick=()=>{v.muted=!v.muted;document.getElementById("mute").textContent=v.muted?"🔇":"🔊"};
+document.getElementById("speed").onchange=e=>v.playbackRate=+e.target.value;
+document.getElementById("download").onclick=downloadMerged;
+document.getElementById("pip").onclick=async()=>{try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else await v.requestPictureInPicture()}catch{}};
+document.getElementById("fs").onclick=async()=>{try{if(!document.fullscreenElement)await document.querySelector(".screen").requestFullscreen();else await document.exitFullscreen()}catch{}};
+v.ontimeupdate=()=>{let d=v.duration;if(Number.isFinite(d)&&d>0)document.getElementById("seek").value=v.currentTime/d*1000;document.getElementById("time").textContent=fmt(v.currentTime)+" / "+fmt(d)};
+document.getElementById("seek").oninput=e=>{if(Number.isFinite(v.duration))v.currentTime=e.target.value/1000*v.duration};
+v.onwaiting=()=>status.textContent="Buffering…";v.onplaying=()=>status.textContent="Playing";v.onended=()=>status.textContent="Ended";
 </script>
 </body>
 </html>
