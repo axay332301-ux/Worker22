@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ultimate Proxy Player (Python Logic)</title>
+<title>Smart Worker Proxy Player</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#070a10;color:#fff;font-family:Arial,sans-serif}
@@ -17,13 +17,11 @@ button,select{background:#192332;color:#fff;border:1px solid #303b4d;border-radi
 video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding:9px;background:#0b1017}
 .seek{width:100%;accent-color:#4777ff}.buttons{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:7px}.grow{flex:1}
 .time{font-size:12px;color:#c6ccd6}.msg{font-size:12px;color:#98a4b6;margin-top:10px;line-height:1.5;word-break:break-all}
-.progressBox{display:none;margin-top:10px}.progressBox.show{display:block}.bar{height:8px;background:#202a38;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:#4777ff;transition: width 0.2s ease;}
-@media(max-width:600px){.form{flex-direction:column;align-items:stretch}.form button{width:100%}.logo{font-size:17px}}
 </style>
 </head>
 <body>
 <div class="wrap">
-<div class="top"><div class="logo">▶ Pro Player</div><div id="status" class="status">Ready</div></div>
+<div class="top"><div class="logo">▶ Smart Player</div><div id="status" class="status">Ready</div></div>
 <div class="card">
 <div class="form">
 <input id="url" type="text" placeholder="https://...master.m3u8 URL डालें">
@@ -38,15 +36,11 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 <button id="back">↶ 10s</button><button id="toggle">▶</button><button id="next">10s ↷</button>
 <button id="mute">🔊</button><span id="time" class="time">00:00 / 00:00</span><span class="grow"></span>
 <select id="speed"><option>.5</option><option>.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option><option>3</option><option>4</option></select>
-<button id="pip">PiP</button><button id="download">⬇ Download</button><button id="fs">⛶</button>
+<button id="pip">PiP</button><button id="fs">⛶</button>
 </div>
 </div>
 </div>
-<div id="msg" class="msg">Full Proxy Active: All Segments + Token + Headers injected.</div>
-<div id="downloadBox" class="progressBox">
-<div id="downloadText" class="msg">Preparing…</div>
-<div class="bar"><i id="bar"></i></div>
-</div>
+<div id="msg" class="msg">Cloudflare Worker Smart M3U8 Rewriter Active.</div>
 </div></div>
 
 <script>
@@ -56,34 +50,6 @@ const msg = document.getElementById("msg"), status = document.getElementById("st
 let hls = null;
 
 function say(t, e=false){ msg.textContent = t; msg.style.color = e ? "#ff9696" : "#98a4b6"; }
-
-// ULTIMATE LOADER: Har ek file par Token lagayega aur Worker ke through bhejega
-class UltimateLoader extends Hls.DefaultConfig.loader {
-    load(context, config, callbacks) {
-        let originalUrl = context.url;
-        let mainUrl = input.value.trim();
-
-        // 1. URL se Token nikalna (edge-cache-token)
-        let tokenStr = "";
-        if (mainUrl.includes("edge-cache-token=")) {
-            tokenStr = "edge-cache-token=" + mainUrl.split("edge-cache-token=")[1];
-        }
-
-        // 2. Token ko Har Segment URL mein jodna
-        if (tokenStr && !originalUrl.includes("edge-cache-token=")) {
-            originalUrl += (originalUrl.includes("?") ? "&" : "?") + tokenStr;
-        }
-
-        // 3. Har request ko Worker (Proxy) ke through bhejna
-        if (!originalUrl.startsWith("https://proplayer.allswbatch22.workers.dev")) {
-            context.url = PROXY_URL + encodeURIComponent(originalUrl);
-        } else {
-            context.url = originalUrl;
-        }
-
-        super.load(context, config, callbacks);
-    }
-}
 
 function stop(){
   if(hls){ try{ hls.destroy(); } catch{} hls = null; }
@@ -96,17 +62,15 @@ function start() {
   
   stop();
   status.textContent = "Loading…";
-  say(`पूर्ण प्रॉक्सी के साथ स्ट्रीम लोड हो रही है...`);
+  say(`Worker के ज़रिए स्ट्रीम लोड हो रही है...`);
 
   if (Hls.isSupported()) {
-    hls = new Hls({
-      maxBufferLength: 30,
-      loader: UltimateLoader, // Apply to ALL requests
-      pLoader: UltimateLoader,
-      fLoader: UltimateLoader
-    });
+    hls = new Hls({ maxBufferLength: 30 });
     
-    hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(rawUrl); });
+    // सिर्फ मेन URL को Worker के थ्रू भेजना है, बाकी सब Worker खुद हैंडल करेगा
+    let proxyUrl = PROXY_URL + encodeURIComponent(rawUrl);
+    
+    hls.loadSource(proxyUrl);
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       status.textContent = "Ready"; say("✅ Stream ready. Playing..."); v.play().catch(()=>{});
     });
@@ -115,7 +79,7 @@ function start() {
       if (data.fatal) {
         if(data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             status.textContent = "Network Error";
-            say("❌ Network Error! सर्वर तक नहीं पहुँच पा रहा है।", true);
+            say("❌ Network Error! कृपया फ्रेश (नया) टोकन वाला लिंक डालें।", true);
             hls.destroy();
         } else if(data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             hls.recoverMediaError();
@@ -128,61 +92,6 @@ function start() {
   }
 }
 
-async function downloadMerged(){
- const rawUrl=input.value.trim();
- if(!rawUrl){say("❌ पहले valid HLS URL डालें।",true);return;}
- if(!hls || !hls.levels || hls.levels.length === 0) {
-     say("⚠️ कृपया पहले 'PLAY' बटन दबाएं और वीडियो चलने दें।", true); return;
- }
-
- const box=document.getElementById("downloadBox"), text=document.getElementById("downloadText"), bar=document.getElementById("bar");
- box.classList.add("show"); bar.style.width="2%"; status.textContent="Downloading…";
-
- try{
-  let levelIndex = Math.max(0, hls.currentLevel);
-  let fragments = hls.levels[levelIndex].details.fragments;
-  if(!fragments || fragments.length === 0) throw new Error("कोई segments नहीं मिले!");
-
-  let downloadedBuffers = [];
-  let total = fragments.length;
-  
-  let tokenStr = "";
-  if (rawUrl.includes("edge-cache-token=")) {
-      tokenStr = "edge-cache-token=" + rawUrl.split("edge-cache-token=")[1];
-  }
-
-  for(let i=0; i<total; i++){
-      text.textContent=`Downloading segment: ${i+1} / ${total}`;
-      let segUrl = fragments[i].url; 
-      
-      if (tokenStr && !segUrl.includes("edge-cache-token=")) {
-          segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
-      }
-
-      if (!segUrl.startsWith("https://proplayer.allswbatch22.workers.dev")) {
-          segUrl = PROXY_URL + encodeURIComponent(segUrl);
-      }
-      
-      let segRes = await fetch(segUrl);
-      if(!segRes.ok) throw new Error(`Segment ${i+1} Error ${segRes.status}`);
-      downloadedBuffers.push(await segRes.arrayBuffer());
-      bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
-  }
-
-  text.textContent="Merging segments…";
-  const blob = new Blob(downloadedBuffers, {type: "video/mp4"});
-  const finalUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = finalUrl; a.download = `Secure_Video_${Date.now()}.mp4`;
-  document.body.appendChild(a); a.click(); a.remove();
-  
-  setTimeout(()=> URL.revokeObjectURL(finalUrl), 60000);
-  bar.style.width="100%"; text.textContent="Download पूरा हुआ!"; status.textContent="Ready";
-  say("✅ Video सफलतापूर्वक download हो गई है।");
- }catch(e){
-  bar.style.width="0"; status.textContent="Download error"; say("❌ Download failed: "+e.message, true);
- }
-}
-
 function fmt(x){if(!Number.isFinite(x))return"00:00";x=Math.floor(x);let h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return h?`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
 document.getElementById("load").onclick=start;input.onkeydown=e=>{if(e.key==="Enter")start()};
 document.getElementById("toggle").onclick=()=>v.paused?v.play():v.pause();
@@ -191,7 +100,6 @@ document.getElementById("back").onclick=()=>v.currentTime=Math.max(0,v.currentTi
 document.getElementById("next").onclick=()=>v.currentTime=Math.min(v.duration||Infinity,v.currentTime+10);
 document.getElementById("mute").onclick=()=>{v.muted=!v.muted;document.getElementById("mute").textContent=v.muted?"🔇":"🔊"};
 document.getElementById("speed").onchange=e=>v.playbackRate=+e.target.value;
-document.getElementById("download").onclick=downloadMerged;
 document.getElementById("pip").onclick=async()=>{try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else await v.requestPictureInPicture()}catch{}};
 document.getElementById("fs").onclick=async()=>{try{if(!document.fullscreenElement)await document.querySelector(".screen").requestFullscreen();else await document.exitFullscreen()}catch{}};
 v.ontimeupdate=()=>{let d=v.duration;if(Number.isFinite(d)&&d>0)document.getElementById("seek").value=v.currentTime/d*1000;document.getElementById("time").textContent=fmt(v.currentTime)+" / "+fmt(d)};
