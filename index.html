@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Advanced Hybrid Player (IP Bypass)</title>
+<title>Ultimate Proxy Player (Python Logic)</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#070a10;color:#fff;font-family:Arial,sans-serif}
@@ -23,7 +23,7 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 </head>
 <body>
 <div class="wrap">
-<div class="top"><div class="logo">▶ Hybrid Pro Player</div><div id="status" class="status">Ready</div></div>
+<div class="top"><div class="logo">▶ Pro Player</div><div id="status" class="status">Ready</div></div>
 <div class="card">
 <div class="form">
 <input id="url" type="text" placeholder="https://...master.m3u8 URL डालें">
@@ -42,7 +42,7 @@ video{display:block;width:100%;background:#000;max-height:70vh}.controls{padding
 </div>
 </div>
 </div>
-<div id="msg" class="msg">IP Binding Bypass Active: .m3u8 via Proxy, .ts via Direct IP.</div>
+<div id="msg" class="msg">Full Proxy Active: All Segments + Token + Headers injected.</div>
 <div id="downloadBox" class="progressBox">
 <div id="downloadText" class="msg">Preparing…</div>
 <div class="bar"><i id="bar"></i></div>
@@ -57,32 +57,30 @@ let hls = null;
 
 function say(t, e=false){ msg.textContent = t; msg.style.color = e ? "#ff9696" : "#98a4b6"; }
 
-// HYBRID LOADER: Manifest Worker se aayega, Segments Direct Mobile IP se aayenge
-class HybridLoader extends Hls.DefaultConfig.loader {
+// ULTIMATE LOADER: Har ek file par Token lagayega aur Worker ke through bhejega
+class UltimateLoader extends Hls.DefaultConfig.loader {
     load(context, config, callbacks) {
-        let url = context.url;
+        let originalUrl = context.url;
         let mainUrl = input.value.trim();
 
-        // Token nikalna
-        let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
-        let tokenStr = match ? match[1] : "";
-
-        // Token ko url mein jodna
-        if (tokenStr && !url.includes("edge-cache-token")) {
-            url += (url.includes("?") ? "&" : "?") + tokenStr;
+        // 1. URL se Token nikalna (edge-cache-token)
+        let tokenStr = "";
+        if (mainUrl.includes("edge-cache-token=")) {
+            tokenStr = "edge-cache-token=" + mainUrl.split("edge-cache-token=")[1];
         }
 
-        // IP-BYPASS LOGIC: 
-        // Agar file .m3u8 (Manifest) hai, toh Proxy use karo CORS bachane ke liye.
-        if (url.includes(".m3u8")) {
-            if (!url.startsWith(PROXY_URL)) {
-                url = PROXY_URL + encodeURIComponent(url);
-            }
-        } 
-        // Agar file .ts ya .key hai, toh Proxy use MAT karo! Direct Browser (Mobile IP) se load karo.
-        // Isse Akamai ko aapka sahi IP address milega aur wo block nahi karega.
+        // 2. Token ko Har Segment URL mein jodna
+        if (tokenStr && !originalUrl.includes("edge-cache-token=")) {
+            originalUrl += (originalUrl.includes("?") ? "&" : "?") + tokenStr;
+        }
 
-        context.url = url;
+        // 3. Har request ko Worker (Proxy) ke through bhejna
+        if (!originalUrl.startsWith("https://proplayer.allswbatch22.workers.dev")) {
+            context.url = PROXY_URL + encodeURIComponent(originalUrl);
+        } else {
+            context.url = originalUrl;
+        }
+
         super.load(context, config, callbacks);
     }
 }
@@ -98,14 +96,14 @@ function start() {
   
   stop();
   status.textContent = "Loading…";
-  say(`Hybrid Proxy (IP Bypass) के साथ स्ट्रीम लोड हो रही है...`);
+  say(`पूर्ण प्रॉक्सी के साथ स्ट्रीम लोड हो रही है...`);
 
   if (Hls.isSupported()) {
     hls = new Hls({
       maxBufferLength: 30,
-      loader: HybridLoader, // Sirf Hybrid Loader ka istemaal
-      pLoader: HybridLoader,
-      fLoader: HybridLoader
+      loader: UltimateLoader, // Apply to ALL requests
+      pLoader: UltimateLoader,
+      fLoader: UltimateLoader
     });
     
     hls.on(Hls.Events.MEDIA_ATTACHED, () => { hls.loadSource(rawUrl); });
@@ -117,7 +115,7 @@ function start() {
       if (data.fatal) {
         if(data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             status.textContent = "Network Error";
-            say("❌ Network Error! टोकन एक्सपायर हो गया है या डायरेक्ट एक्सेस ब्लॉक है।", true);
+            say("❌ Network Error! सर्वर तक नहीं पहुँच पा रहा है।", true);
             hls.destroy();
         } else if(data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             hls.recoverMediaError();
@@ -148,18 +146,23 @@ async function downloadMerged(){
   let downloadedBuffers = [];
   let total = fragments.length;
   
-  let match = rawUrl.match(/(edge-cache-token=[^&]+)/);
-  let tokenStr = match ? match[1] : "";
+  let tokenStr = "";
+  if (rawUrl.includes("edge-cache-token=")) {
+      tokenStr = "edge-cache-token=" + rawUrl.split("edge-cache-token=")[1];
+  }
 
   for(let i=0; i<total; i++){
       text.textContent=`Downloading segment: ${i+1} / ${total}`;
       let segUrl = fragments[i].url; 
       
-      if (tokenStr && !segUrl.includes("edge-cache-token")) {
+      if (tokenStr && !segUrl.includes("edge-cache-token=")) {
           segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
       }
 
-      // Download ke liye bhi hum direct URL fetch karenge (Worker bypass)
+      if (!segUrl.startsWith("https://proplayer.allswbatch22.workers.dev")) {
+          segUrl = PROXY_URL + encodeURIComponent(segUrl);
+      }
+      
       let segRes = await fetch(segUrl);
       if(!segRes.ok) throw new Error(`Segment ${i+1} Error ${segRes.status}`);
       downloadedBuffers.push(await segRes.arrayBuffer());
@@ -169,7 +172,7 @@ async function downloadMerged(){
   text.textContent="Merging segments…";
   const blob = new Blob(downloadedBuffers, {type: "video/mp4"});
   const finalUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = finalUrl; a.download = `Video_${Date.now()}.mp4`;
+  const a = document.createElement("a"); a.href = finalUrl; a.download = `Secure_Video_${Date.now()}.mp4`;
   document.body.appendChild(a); a.click(); a.remove();
   
   setTimeout(()=> URL.revokeObjectURL(finalUrl), 60000);
