@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="hi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>RWA Pro Portal - Courses & Advanced HLS Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navbar -->
+    <nav class="bg-[#0b1017] border-b border-[#273142] sticky top-0 z-50 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchCategory(state.cat)">
+                <div class="w-9 h-9 rounded-xl bg-[#4777ff] flex items-center justify-center text-white font-extrabold text-lg">R</div>
+                <div>
+                    <div class="font-bold text-base leading-none text-white">RWA Course Portal</div>
+                    <div id="apiStatus" class="text-[11px] text-emerald-400 mt-0.5">● Ready</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="switchCategory('paid')" id="btnPaid" class="primary text-xs">🎓 Paid Batch</button>
+                <button onclick="switchCategory('free')" id="btnFree" class="text-xs">🆓 Free Batch</button>
+                <button onclick="openTestModal()" class="text-xs bg-indigo-600 border-0 font-bold">📝 Mock Test</button>
+                <button onclick="togglePlayerBox()" class="text-xs bg-amber-500 text-black border-0 font-bold">▶ Player</button>
+                <button onclick="toggleModal('tokenModal')" class="text-xs">🔑 Token</button>
+                <button id="backBtn" onclick="goBack()" class="hidden text-xs bg-slate-700">⬅ Back</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl w-full mx-auto p-3 sm:p-5 flex-1">
+
+        <!-- RWA Advanced HLS Player + YouTube + Comments Section -->
+        <div id="playerSection" class="hidden mb-6">
+            <div class="card">
+                <div class="top">
+                    <div id="playingTitle" class="logo text-amber-400 truncate">▶ Advanced HLS Player</div>
+                    <div class="flex items-center gap-2">
+                        <select id="qualitySelect" onchange="changeLectureQuality(this.value)" class="hidden text-xs"></select>
+                        <div id="status" class="status">Ready</div>
+                        <button onclick="closePlayerBox()" class="text-xs bg-red-600/30 border-red-500/40 text-red-300">✖ Close</button>
+                    </div>
+                </div>
+
+                <!-- Custom URL Input & Play Bar -->
+                <div class="form mb-3">
+                    <input id="url" placeholder="Authorized HLS / Proxy .m3u8 URL paste करें या नीचे क्लास पर क्लिक करें">
+                    <button id="load" class="primary">PLAY</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <!-- Video Screen & Controls -->
+                    <div class="lg:col-span-2">
+                        <!-- HLS HTML5 Video Screen -->
+                        <div id="hlsScreen" class="screen">
+                            <video id="video" playsinline preload="metadata"></video>
+                            <div class="controls">
+                                <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
+                                <div class="buttons">
+                                    <button id="back">↶ 10s</button>
+                                    <button id="toggle">▶</button>
+                                    <button id="next">10s ↷</button>
+                                    <button id="mute">🔊</button>
+                                    <span id="time" class="time">00:00 / 00:00</span>
+                                    <span class="grow"></span>
+                                    <select id="speed">
+                                        <option>.5</option>
+                                        <option>.75</option>
+                                        <option selected>1</option>
+                                        <option>1.25</option>
+                                        <option>1.5</option>
+                                        <option>2</option>
+                                        <option>3</option>
+                                        <option>4</option>
+                                    </select>
+                                    <button id="pip">PiP</button>
+                                    <button id="download">⬇ Download</button>
+                                    <button id="fs">⛶</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- YouTube Embed Screen (For Free Classes) -->
+                        <div id="ytScreen" class="screen hidden aspect-video">
+                            <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+
+                        <div id="msg" class="msg">URL डालकर PLAY दबाएँ या नीचे किसी क्लास के Watch बटन पर क्लिक करें।</div>
+                        <div id="downloadBox" class="progressBox">
+                            <div id="downloadText" class="msg">Preparing…</div>
+                            <div class="bar"><i id="bar"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- Recorded Class Comments -->
+                    <div class="bg-[#0b1017] border border-[#273142] rounded-xl flex flex-col h-80 lg:h-auto">
+                        <div class="p-3 border-b border-[#273142] flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-300">💬 Recorded Comments</span>
+                            <span id="commentCount" class="bg-[#192332] text-amber-400 px-2 py-0.5 rounded">0</span>
+                        </div>
+                        <div id="commentList" class="flex-1 p-3 overflow-y-auto space-y-2.5 text-xs"></div>
+                        <div class="p-2 border-t border-[#273142] flex gap-1.5">
+                            <input id="commentInput" type="text" placeholder="Doubt या comment लिखें..." class="flex-1 bg-[#080d14] border border-[#303b4d] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                            <button onclick="postComment()" class="primary text-xs">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- In-App PDF Viewer Box -->
+        <div id="pdfBox" class="hidden mb-6 card">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                <h3 id="pdfTitle" class="font-bold text-emerald-400 text-sm truncate">📄 PDF Viewer</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="setPdfMode('appx')" class="text-xs">AppX Viewer</button>
+                    <button onclick="setPdfMode('gdocs')" class="text-xs">Google Viewer</button>
+                    <a id="rawPdfLink" href="#" target="_blank" class="primary text-xs px-3 py-2 rounded-lg no-underline">📥 Direct Open</a>
+                    <button onclick="closePdfBox()" class="text-xs bg-red-600/30 text-red-300">✖</button>
+                </div>
+            </div>
+            <iframe id="pdfFrame" class="w-full h-[75vh] bg-black rounded-xl" src="" frameborder="0"></iframe>
+        </div>
+
+        <!-- Breadcrumb & Search -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+                <p id="crumbText" class="text-xs text-amber-400 font-bold uppercase">Dashboard</p>
+                <h2 id="headingText" class="text-xl sm:text-2xl font-bold">All Courses</h2>
+            </div>
+            <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search subject, topic or video..." 
+                   class="w-full sm:w-64 bg-[#101620] border border-[#273142] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none">
+        </div>
+
+        <!-- Course Sub-Tabs -->
+        <div id="subTabs" class="hidden flex gap-2 mb-5 border-b border-[#273142] pb-3 overflow-x-auto">
+            <button onclick="loadCourseTab('subjects')" id="sub_subjects" class="primary text-xs">📚 Subjects</button>
+            <button onclick="loadCourseTab('live')" id="sub_live" class="text-xs">🔴 Live & Upcoming</button>
+            <button onclick="loadCourseTab('tests')" id="sub_tests" class="text-xs">📝 Test Series</button>
+            <button onclick="loadCourseTab('telegram')" id="sub_telegram" class="text-xs">✈️ Doubt Group</button>
+        </div>
+
+        <!-- Cards Grid -->
+        <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    </main>
+
+    <!-- Mock Test Modal -->
+    <div id="testModal" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-3">
+        <div class="card max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center pb-3 border-b border-[#273142]">
+                <div>
+                    <span class="text-[10px] text-amber-400 font-bold">TEST SERIES #700 • TEST #40186</span>
+                    <h3 class="font-bold text-base">Polity 01 - Mock Test</h3>
+                </div>
+                <button onclick="toggleModal('testModal')" class="text-xs">✖ Close</button>
+            </div>
+            <div id="quizContainer" class="py-4 overflow-y-auto space-y-4 flex-1"></div>
+            <div class="pt-3 border-t border-[#273142] flex justify-between items-center">
+                <span id="quizScoreText" class="font-bold text-amber-400 text-sm">Score: 0 / 10</span>
+                <button onclick="renderQuiz()" class="primary text-xs">🔄 Re-Attempt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token Modal -->
+    <div id="tokenModal" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
+        <div class="card max-w-md w-full">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-amber-400">🔑 Token & API Settings</h3>
+                <button onclick="toggleModal('tokenModal')" class="text-xs">✖</button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300">User-ID</label>
+                    <input id="cfgUserId" type="text" class="w-full bg-[#080d14] border border-[#303b4d] rounded-lg p-2.5 text-white mt-1">
+                </div>
+                <div>
+                    <label class="text-slate-300">Authorization Token</label>
+                    <textarea id="cfgToken" rows="4" class="w-full bg-[#080d14] border border-[#303b4d] rounded-lg p-2.5 text-white mt-1 font-mono"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button onclick="saveConfig()" class="primary text-xs">Save & Reload</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="player.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
