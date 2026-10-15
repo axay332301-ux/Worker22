@@ -1,9 +1,9 @@
 // =========================================================
 // RWA ADVANCED HLS PLAYER & DOWNLOADER ENGINE (player.js)
 // =========================================================
-const PROXY = "https://proplayer.probrosystemset.workers.dev/proxy?url=";
-const SEGMENT = "https://proplayer.probrosystemset.workers.dev/segment?url=";
-
+// Termux Bridge Server URL
+const PROXY = "http://127.0.0.1:8080/proxy?url=";
+const SEGMENT = "http://127.0.0.1:8080/proxy?url=";
 const v = document.getElementById("video");
 const input = document.getElementById("url");
 const msg = document.getElementById("msg");
