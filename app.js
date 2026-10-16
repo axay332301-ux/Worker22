@@ -10,7 +10,7 @@ let CFG = {
 };
 
 const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
-const WORKER_PROXY = "https://deutsch-screensavers-interactive-stylish.trycloudflare.com/stream?url=";
+const WORKER_PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 
 function decryptAppX(encStr) {
     if (!encStr || typeof encStr !== "string") return "";
