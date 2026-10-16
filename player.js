@@ -26,7 +26,6 @@ function valid(u) {
     }
 }
 
-// Unwrap URL if already proxied so edge-cache-token can be extracted cleanly
 function unwrapOriginalUrl(u) {
     if (!u) return "";
     try {
@@ -58,25 +57,21 @@ class BackendLoader extends Hls.DefaultConfig.loader {
         let originalUrl = ctx.url;
         let mainUrl = input ? unwrapOriginalUrl(input.value.trim()) : "";
 
-        // 1. Extract and cache edge-cache-token from main URL
         let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
         if (match) {
             cachedToken = match[1];
         }
 
-        // 2. If URL is already proxied by our worker, pass it directly
         if (originalUrl.includes("allswbatch22.workers.dev")) {
             ctx.url = originalUrl;
             super.load(ctx, cfg, cb);
             return;
         }
 
-        // 3. Inject cached token into child playlists and segments
         if (cachedToken && !originalUrl.includes("edge-cache-token=")) {
             originalUrl += (originalUrl.includes("?") ? "&" : "?") + cachedToken;
         }
 
-        // 4. Route child .m3u8 to /stream and .ts segments to /proxy
         if (originalUrl.includes(".m3u8")) {
             ctx.url = PROXY + encodeURIComponent(originalUrl);
         } else if (segment(originalUrl)) {
@@ -104,7 +99,6 @@ function stopPlayer() {
     showLoader(false);
 }
 
-// Close Player & return to Explorer Slide
 window.closePlayerBox = function() {
     stopPlayer();
     const menu = document.getElementById("settingsMenu");
@@ -152,7 +146,6 @@ function start() {
     let tokMatch = cleanRaw.match(/(edge-cache-token=[^&]+)/);
     if (tokMatch) cachedToken = tokMatch[1];
 
-    // Direct MP4 fallback check
     if (cleanRaw.includes(".mp4") && !cleanRaw.includes(".m3u8")) {
         v.src = cleanRaw;
         populateQualitySettings([]);
@@ -213,9 +206,6 @@ function start() {
     }
 }
 
-// =========================================================
-// COMPACT QUALITY SELECTOR
-// =========================================================
 function populateQualitySettings(hlsLevels) {
     const qList = document.getElementById("qualityList");
     if (!qList) return;
@@ -288,9 +278,6 @@ if (v) {
     });
 }
 
-// =========================================================
-// VIDEO SEGMENT MERGER & MP4 DOWNLOADER
-// =========================================================
 async function downloadMerged() {
     const raw = input ? unwrapOriginalUrl(input.value.trim()) : "";
     if (!valid(raw) || !hls || !hls.levels || hls.levels.length === 0) return;
@@ -299,7 +286,7 @@ async function downloadMerged() {
     const text = document.getElementById("downloadText");
     const bar = document.getElementById("bar");
     if (box) box.classList.add("show");
-    if (bar) bar.style.width = "2%";
+    if (bar) bar.style.width = "2%
     if (text) text.textContent = "Preparing video segments...";
 
     try {
@@ -359,7 +346,6 @@ function fmt(x) {
         : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-// Bind Player Controls
 const toggleBtn = document.getElementById("toggle");
 if (toggleBtn) toggleBtn.onclick = () => v.paused ? v.play() : v.pause();
 
@@ -392,32 +378,38 @@ if (pipBtn) pipBtn.onclick = async () => {
     } catch {}
 };
 
-// Fullscreen Control (Hides header & other buttons, shows only back button when in fullscreen)
+// FULLSCREEN & MINIMIZE FIX
 const fsBtn = document.getElementById("fs");
 const screenEl = document.getElementById("hlsScreen");
 const headerBar = document.getElementById("playerHeaderBar");
-const controlsBar = document.getElementById("playerControlsBar");
 
 if (fsBtn && screenEl) {
     fsBtn.onclick = async () => {
         try {
-            if (!document.fullscreenElement) {
-                await screenEl.requestFullscreen();
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (screenEl.requestFullscreen) await screenEl.requestFullscreen();
+                else if (screenEl.webkitRequestFullscreen) await screenEl.webkitRequestFullscreen();
             } else {
-                await document.exitFullscreen();
+                if (document.exitFullscreen) await document.exitFullscreen();
+                else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
             }
         } catch {}
     };
 }
 
-document.addEventListener("fullscreenchange", () => {
-    if (document.fullscreenElement) {
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+function handleFullscreenChange() {
+    const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (isFs) {
         if (headerBar) headerBar.classList.add("hidden");
-        // Hide extra buttons in control bar, keep only back button / essential items visible or style fullscreen
+        if (fsBtn) fsBtn.textContent = "🗗"; // Minimize / Exit Fullscreen icon
     } else {
         if (headerBar) headerBar.classList.remove("hidden");
+        if (fsBtn) fsBtn.textContent = "⛶"; // Normal Fullscreen icon
     }
-});
+}
 
 v.ontimeupdate = () => {
     let d = v.duration;
