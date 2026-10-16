@@ -286,7 +286,7 @@ async function downloadMerged() {
     const text = document.getElementById("downloadText");
     const bar = document.getElementById("bar");
     if (box) box.classList.add("show");
-    if (bar) bar.style.width = "2%
+    if (bar) bar.style.width = "2%";
     if (text) text.textContent = "Preparing video segments...";
 
     try {
@@ -378,7 +378,7 @@ if (pipBtn) pipBtn.onclick = async () => {
     } catch {}
 };
 
-// FULLSCREEN & MINIMIZE FIX
+// FULLSCREEN TOGGLE & MINIMIZE BUTTON LOGIC
 const fsBtn = document.getElementById("fs");
 const screenEl = document.getElementById("hlsScreen");
 const headerBar = document.getElementById("playerHeaderBar");
@@ -386,30 +386,24 @@ const headerBar = document.getElementById("playerHeaderBar");
 if (fsBtn && screenEl) {
     fsBtn.onclick = async () => {
         try {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (screenEl.requestFullscreen) await screenEl.requestFullscreen();
-                else if (screenEl.webkitRequestFullscreen) await screenEl.webkitRequestFullscreen();
+            if (!document.fullscreenElement) {
+                await screenEl.requestFullscreen();
             } else {
-                if (document.exitFullscreen) await document.exitFullscreen();
-                else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+                await document.exitFullscreen();
             }
         } catch {}
     };
 }
 
-document.addEventListener("fullscreenchange", handleFullscreenChange);
-document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-
-function handleFullscreenChange() {
-    const isFs = document.fullscreenElement || document.webkitFullscreenElement;
-    if (isFs) {
+document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
         if (headerBar) headerBar.classList.add("hidden");
-        if (fsBtn) fsBtn.textContent = "🗗"; // Minimize / Exit Fullscreen icon
+        if (fsBtn) fsBtn.textContent = "🗗"; // Minimize icon when fullscreen
     } else {
         if (headerBar) headerBar.classList.remove("hidden");
-        if (fsBtn) fsBtn.textContent = "⛶"; // Normal Fullscreen icon
+        if (fsBtn) fsBtn.textContent = "⛶"; // Fullscreen icon when normal
     }
-}
+});
 
 v.ontimeupdate = () => {
     let d = v.duration;
