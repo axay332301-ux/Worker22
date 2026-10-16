@@ -3,21 +3,18 @@
 // =========================================================
 const PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 const SEGMENT = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
+
 const v = document.getElementById("video");
 const input = document.getElementById("url");
-const msg = document.getElementById("msg");
-const statusEl = document.getElementById("status");
+const bufferLoader = document.getElementById("bufferLoader");
+
 let hls = null;
 let cachedToken = "";
 
-// Status text ko hamesha ke liye hidden/blank rakhne ke liye
-if (statusEl) statusEl.style.display = "none";
-
-function say(t, e = false) {
-    if (msg) {
-        msg.textContent = t;
-        msg.style.color = e ? "#ff9696" : "#98a4b6";
-    }
+function showLoader(show) {
+    if (!bufferLoader) return;
+    if (show) bufferLoader.classList.remove("hidden");
+    else bufferLoader.classList.add("hidden");
 }
 
 function valid(u) {
@@ -46,7 +43,7 @@ function segment(u) {
 class BackendLoader extends Hls.DefaultConfig.loader {
     load(ctx, cfg, cb) {
         let originalUrl = ctx.url;
-        let mainUrl = input.value.trim();
+        let mainUrl = input ? input.value.trim() : "";
 
         let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
         if (match) {
@@ -57,7 +54,7 @@ class BackendLoader extends Hls.DefaultConfig.loader {
             originalUrl += (originalUrl.includes("?") ? "&" : "?") + cachedToken;
         }
 
-        if (segment(originalUrl) && !originalUrl.includes("proplayer.probrosystemset")) {
+        if (segment(originalUrl) && !originalUrl.includes("workers.dev")) {
             ctx.url = SEGMENT + encodeURIComponent(originalUrl);
         } else {
             ctx.url = originalUrl;
@@ -72,36 +69,40 @@ function stopPlayer() {
         try { hls.destroy(); } catch {}
         hls = null;
     }
-    v.pause();
-    v.removeAttribute("src");
-    v.load();
+    if (v) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+    }
     const ytFrame = document.getElementById("ytFrame");
     if (ytFrame) ytFrame.src = "";
-    
-    // Player screen hide karke close button ka kaam pura karna
-    const hlsScreen = document.getElementById("hlsScreen");
-    const ytScreen = document.getElementById("ytScreen");
-    if (hlsScreen) hlsScreen.classList.add("hidden");
-    if (ytScreen) ytScreen.classList.add("hidden");
+    showLoader(false);
 }
 
-function start() {
-    let raw = input.value.trim();
-    if (!raw) {
-        say("Valid URL dalein.", true);
-        return;
+// Close button function
+window.closePlayerBox = function() {
+    stopPlayer();
+    const menu = document.getElementById("settingsMenu");
+    if (menu) menu.classList.remove("show");
+    if (typeof showSlide === "function") {
+        showSlide("slideExplorer");
     }
+};
+
+function start() {
+    let raw = input ? input.value.trim() : "";
+    if (!raw) return;
 
     stopPlayer();
+    showLoader(true);
 
     const isYT = (!raw.startsWith("http") && raw.length >= 10 && raw.length <= 15) || raw.includes("youtube.com") || raw.includes("youtu.be");
 
     if (isYT) {
-        const ytScreen = document.getElementById("ytScreen");
-        const hlsScreen = document.getElementById("hlsScreen");
-        if (hlsScreen) hlsScreen.classList.add("hidden");
-        if (ytScreen) ytScreen.classList.remove("hidden");
-        
+        showLoader(false);
+        document.getElementById("hlsScreen").classList.add("hidden");
+        document.getElementById("ytScreen").classList.remove("hidden");
+
         let ytId = raw;
         if (raw.includes("v=")) ytId = raw.split("v=")[1].split("&")[0];
         else if (raw.includes("youtu.be/")) ytId = raw.split("youtu.be/")[1].split("?")[0];
@@ -111,13 +112,11 @@ function start() {
         return;
     }
 
-    const ytScreen = document.getElementById("ytScreen");
-    const hlsScreen = document.getElementById("hlsScreen");
-    if (ytScreen) ytScreen.classList.add("hidden");
-    if (hlsScreen) hlsScreen.classList.remove("hidden");
+    document.getElementById("ytScreen").classList.add("hidden");
+    document.getElementById("hlsScreen").classList.remove("hidden");
 
     if (!valid(raw)) {
-        say("Valid URL dalein.", true);
+        showLoader(false);
         return;
     }
 
@@ -128,74 +127,109 @@ function start() {
             enableWorker: true,
             lowLatencyMode: false,
             backBufferLength: 30,
-            maxBufferLength: 20,
+            maxBufferLength: 25,
             loader: BackendLoader
         });
+
         hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
+
         hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-            // Quality list build inside Settings Panel
-            const qList = document.getElementById("qualityList");
-            if (qList) {
-                qList.innerHTML = '<div class="q-option active" onclick="changeQual(-1, this)">Auto Quality</div>';
-                if (data.levels && data.levels.length > 0) {
-                    data.levels.forEach((lvl, idx) => {
-                        let qName = lvl.height ? `${lvl.height}p` : `Quality ${idx + 1}`;
-                        qList.innerHTML += `<div class="q-option" onclick="changeQual(${idx}, this)">${qName}</div>`;
-                    });
-                }
-            }
+            showLoader(false);
+            populateQualitySettings(data.levels || []);
             v.play().catch(() => {});
         });
+
         hls.on(Hls.Events.ERROR, (_, d) => {
             if (d.fatal) {
-                say("HLS error: " + (d.details || "unknown"), true);
+                showLoader(false);
                 if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
                     try { hls.recoverMediaError(); } catch {}
                 }
             }
         });
+
         hls.attachMedia(v);
     } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = src;
-        v.onloadedmetadata = () => { v.play().catch(() => {}); };
+        v.onloadedmetadata = () => {
+            showLoader(false);
+            v.play().catch(() => {});
+        };
     }
 }
 
-// Global Quality & Speed Change Handler
-window.changeQual = function(idx, el) {
+// Populate both API qualities (240p/360p/480p/720p) & HLS internal levels
+function populateQualitySettings(hlsLevels) {
+    const qList = document.getElementById("qualityList");
+    if (!qList) return;
+
+    let html = "";
+
+    // 1. Check if lecture has multiple server links (720p, 480p, 360p, 240p) in app.js
+    const activeInfo = (typeof state !== "undefined" && state.activeKey && state.mediaMap) ? state.mediaMap[state.activeKey] : null;
+    const serverQuals = activeInfo && activeInfo.qualities ? Object.keys(activeInfo.qualities) : [];
+
+    // 2. If HLS master manifest itself has multi-bitrate levels
+    if (hlsLevels && hlsLevels.length > 1) {
+        html += `<div class="q-option active" onclick="changeHlsLevel(-1, this)">Auto</div>`;
+        hlsLevels.forEach((lvl, idx) => {
+            let label = lvl.height ? `${lvl.height}p` : `Level ${idx + 1}`;
+            html += `<div class="q-option" onclick="changeHlsLevel(${idx}, this)">${label}</div>`;
+        });
+    } else if (serverQuals.length > 0) {
+        serverQuals.forEach((qKey, idx) => {
+            const isAct = (input.value === activeInfo.qualities[qKey]) || idx === 0;
+            html += `<div class="q-option ${isAct ? 'active' : ''}" onclick="switchServerQuality('${qKey.replace(/'/g, "")}', this)">${qKey}</div>`;
+        });
+    } else {
+        html = `<div class="q-option active" onclick="changeHlsLevel(-1, this)">720p HD</div>
+                <div class="q-option" onclick="changeHlsLevel(0, this)">480p</div>
+                <div class="q-option" onclick="changeHlsLevel(0, this)">360p</div>
+                <div class="q-option" onclick="changeHlsLevel(0, this)">240p</div>`;
+    }
+
+    qList.innerHTML = html;
+}
+
+window.changeHlsLevel = function(idx, el) {
     if (hls) hls.currentLevel = idx;
-    document.querySelectorAll(".q-option").forEach(o => o.classList.remove("active"));
+    document.querySelectorAll("#qualityList .q-option").forEach(o => o.classList.remove("active"));
     if (el) el.classList.add("active");
     toggleSettingsMenu();
 };
 
+window.switchServerQuality = function(qKey, el) {
+    const currentTime = v ? v.currentTime : 0;
+    document.querySelectorAll("#qualityList .q-option").forEach(o => o.classList.remove("active"));
+    if (el) el.classList.add("active");
+    toggleSettingsMenu();
+    if (typeof changeLectureQuality === "function") {
+        changeLectureQuality(qKey, currentTime);
+    }
+};
+
 window.changeSpd = function(rate, el) {
-    v.playbackRate = rate;
+    if (v) v.playbackRate = rate;
     document.querySelectorAll(".spd-option").forEach(o => o.classList.remove("active"));
     if (el) el.classList.add("active");
     toggleSettingsMenu();
 };
 
-function toggleSettingsMenu() {
+window.toggleSettingsMenu = function() {
     const menu = document.getElementById("settingsMenu");
     if (menu) menu.classList.toggle("show");
-}
+};
 
 async function downloadMerged() {
-    const raw = input.value.trim();
-    if (!valid(raw)) { say("Pehle valid HLS URL dalein.", true); return; }
-
-    if (!hls || !hls.levels || hls.levels.length === 0) {
-        say("⚠️ Kripya pehle video play hone dein.", true);
-        return;
-    }
+    const raw = input ? input.value.trim() : "";
+    if (!valid(raw) || !hls || !hls.levels || hls.levels.length === 0) return;
 
     const box = document.getElementById("downloadBox");
     const text = document.getElementById("downloadText");
     const bar = document.getElementById("bar");
     if (box) box.classList.add("show");
     if (bar) bar.style.width = "2%";
-    if (text) text.textContent = "Fetching segments...";
+    if (text) text.textContent = "Preparing segments...";
 
     try {
         let levelIndex = hls.currentLevel >= 0 ? hls.currentLevel : 0;
@@ -206,30 +240,30 @@ async function downloadMerged() {
         let tokenStr = match ? match[1] : "";
 
         for (let i = 0; i < total; i++) {
-            if (text) text.textContent = `Downloading segment: ${i + 1} / ${total}`;
+            if (text) text.textContent = `Downloading: ${i + 1} / ${total} (${Math.round(((i + 1) / total) * 100)}%)`;
             let segUrl = fragments[i].url;
             if (tokenStr && !segUrl.includes("edge-cache-token=")) segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
-            if (!segUrl.includes("proplayer.probrosystemset")) segUrl = SEGMENT + encodeURIComponent(segUrl);
+            if (!segUrl.includes("workers.dev")) segUrl = SEGMENT + encodeURIComponent(segUrl);
             let segRes = await fetch(segUrl);
             if (!segRes.ok) throw new Error(`Segment ${i + 1} Error`);
             downloadedBuffers.push(await segRes.arrayBuffer());
             if (bar) bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
         }
 
-        if (text) text.textContent = "Merging segments...";
+        if (text) text.textContent = "Merging video file...";
         const blob = new Blob(downloadedBuffers, { type: "video/mp4" });
         const finalUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = finalUrl;
-        a.download = `RWA_Video_${Math.floor(Math.random() * 10000)}.mp4`;
+        a.download = `RWA_Class_${Math.floor(Math.random() * 10000)}.mp4`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(finalUrl), 60000);
-        if (bar) bar.style.width = "100%";
-        if (text) text.textContent = "Download complete!";
+        if (text) text.textContent = "✅ Download Complete!";
+        setTimeout(() => { if (box) box.classList.remove("show"); }, 4000);
     } catch (e) {
-        if (text) text.textContent = e.message;
+        if (text) text.textContent = "⚠️ Download error: " + e.message;
     }
 }
 
@@ -237,19 +271,20 @@ function fmt(x) {
     if (!Number.isFinite(x)) return "00:00";
     x = Math.floor(x);
     let h = Math.floor(x / 3600), m = Math.floor(x % 3600 / 60), s = x % 60;
-    return h ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return h
+        ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+        : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-// Controls Binding
-const loadBtn = document.getElementById("load");
-if (loadBtn) loadBtn.onclick = start;
-if (input) { input.style.display = "none"; }
-
+// Bind Player Controls
 const toggleBtn = document.getElementById("toggle");
 if (toggleBtn) toggleBtn.onclick = () => v.paused ? v.play() : v.pause();
 
-v.onplay = () => { if (toggleBtn) toggleBtn.textContent = "⏸"; };
+v.onplay = () => { if (toggleBtn) toggleBtn.textContent = "⏸"; showLoader(false); };
 v.onpause = () => { if (toggleBtn) toggleBtn.textContent = "▶"; };
+v.onwaiting = () => showLoader(true);
+v.onplaying = () => showLoader(false);
+v.oncanplay = () => showLoader(false);
 
 const backBtn = document.getElementById("back");
 if (backBtn) backBtn.onclick = () => v.currentTime = Math.max(0, v.currentTime - 10);
@@ -270,7 +305,7 @@ const pipBtn = document.getElementById("pip");
 if (pipBtn) pipBtn.onclick = async () => {
     try {
         if (document.pictureInPictureElement) await document.exitPictureInPicture();
-        else await v.requestPictureInPicture();
+        else if (v.requestPictureInPicture) await v.requestPictureInPicture();
     } catch {}
 };
 
@@ -283,14 +318,6 @@ if (fsBtn) fsBtn.onclick = async () => {
     } catch {}
 };
 
-// Close Button Fix (Sabhhi close buttons ko bind kar diya hai)
-document.querySelectorAll(".close-btn, [id*='Close'], button:has-text('Close')").forEach(btn => {
-    btn.onclick = stopPlayer;
-});
-const specificClose = document.getElementById("closePlayer") || document.querySelector(".close");
-if (specificClose) specificClose.onclick = stopPlayer;
-
-// Timing & Seek Bar positioning alignment
 v.ontimeupdate = () => {
     let d = v.duration;
     const seekEl = document.getElementById("seek");
@@ -303,34 +330,3 @@ const seekEl = document.getElementById("seek");
 if (seekEl) seekEl.oninput = e => {
     if (Number.isFinite(v.duration)) v.currentTime = e.target.value / 1000 * v.duration;
 };
-
-// PDF buttons & Settings Menu Injection (Agar HTML mein na ho)
-document.addEventListener("DOMContentLoaded", () => {
-    // Hide status text element completely
-    if (statusEl) statusEl.remove();
-
-    // Add Settings & PDF UI dynamically if needed
-    const playerWrapper = document.querySelector(".player-wrapper") || document.getElementById("hlsScreen");
-    if (playerWrapper && !document.getElementById("settingsMenu")) {
-        const settingsDiv = document.createElement("div");
-        settingsDiv.id = "settingsMenu";
-        settingsDiv.className = "ott-settings-popup";
-        settingsDiv.innerHTML = `
-            <div class="sett-header">⚙️ Player Settings <span onclick="toggleSettingsMenu()" style="cursor:pointer; float:right;">✕</span></div>
-            <div class="sett-section">
-                <div class="sett-title">Quality</div>
-                <div id="qualityList" class="sett-options"></div>
-            </div>
-            <div class="sett-section">
-                <div class="sett-title">Playback Speed</div>
-                <div class="sett-options">
-                    <div class="spd-option" onclick="changeSpd(0.5, this)">0.5x</div>
-                    <div class="spd-option active" onclick="changeSpd(1, this)">1.0x</div>
-                    <div class="spd-option" onclick="changeSpd(1.5, this)">1.5x</div>
-                    <div class="spd-option" onclick="changeSpd(2, this)">2.0x</div>
-                </div>
-            </div>
-        `;
-        playerWrapper.appendChild(settingsDiv);
-    }
-});
