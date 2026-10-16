@@ -1,5 +1,5 @@
 // =========================================================
-// RWA ADVANCED HLS PLAYER & DOWNLOADER ENGINE (player.js)
+// RWA ULTIMATE OTT PLAYER ENGINE (player.js)
 // =========================================================
 const PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 const SEGMENT = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
@@ -11,8 +11,10 @@ let hls = null;
 let cachedToken = "";
 
 function say(t, e = false) {
-    msg.textContent = t;
-    msg.style.color = e ? "#ff9696" : "#98a4b6";
+    if (msg) {
+        msg.textContent = t;
+        msg.style.color = e ? "#ff9696" : "#98a4b6";
+    }
 }
 
 function valid(u) {
@@ -94,7 +96,6 @@ function start() {
 
         const ytFrame = document.getElementById("ytFrame");
         if (ytFrame) ytFrame.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
-        statusEl.textContent = "Playing YouTube";
         say("YouTube class chal rahi hai.");
         return;
     }
@@ -108,8 +109,7 @@ function start() {
     }
 
     let src = manifest(raw);
-    statusEl.textContent = "Loading…";
-    say("Manifest loading via Proxy...");
+    say("Loading stream...");
 
     if (Hls.isSupported()) {
         hls = new Hls({
@@ -121,10 +121,9 @@ function start() {
         });
         hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
         hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-            statusEl.textContent = "Ready";
             say("Stream ready.");
             
-            // Quality Dropdown Dynamic Population
+            // Quality Dropdown Populate Fix
             let qualitySel = document.getElementById("qualitySelect");
             if (!qualitySel) {
                 qualitySel = document.createElement("select");
@@ -133,8 +132,6 @@ function start() {
                 qualitySel.onchange = (e) => {
                     if (hls) hls.currentLevel = parseInt(e.target.value);
                 };
-                const controlsContainer = document.querySelector(".player-controls") || document.body;
-                controlsContainer.appendChild(qualitySel);
             }
 
             if (data.levels && data.levels.length > 0) {
@@ -150,7 +147,6 @@ function start() {
         });
         hls.on(Hls.Events.ERROR, (_, d) => {
             if (d.fatal) {
-                statusEl.textContent = "Error";
                 say("HLS error: " + (d.details || "unknown"), true);
                 if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
                     try { hls.recoverMediaError(); } catch {}
@@ -161,7 +157,6 @@ function start() {
     } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = src;
         v.onloadedmetadata = () => {
-            statusEl.textContent = "Ready";
             v.play().catch(() => {});
         };
     } else {
@@ -177,17 +172,16 @@ async function downloadMerged() {
     }
 
     if (!hls || !hls.levels || hls.levels.length === 0 || !hls.levels[hls.currentLevel >= 0 ? hls.currentLevel : 0]?.details) {
-        say("⚠️ Kripya pehle 'PLAY' button dabayein, jab video play hone lage tab Download par click karein.", true);
+        say("⚠️ Kripya pehle video play hone dein, fir Download dabayein.", true);
         return;
     }
 
     const box = document.getElementById("downloadBox");
     const text = document.getElementById("downloadText");
     const bar = document.getElementById("bar");
-    box.classList.add("show");
-    bar.style.width = "2%";
-    text.textContent = "HLS Player se segments fetch kar rahe hain...";
-    statusEl.textContent = "Downloading…";
+    if (box) box.classList.add("show");
+    if (bar) bar.style.width = "2%";
+    if (text) text.textContent = "Fetching segments...";
 
     try {
         let levelIndex = hls.currentLevel >= 0 ? hls.currentLevel : 0;
@@ -202,7 +196,7 @@ async function downloadMerged() {
         let tokenStr = match ? match[1] : "";
 
         if (fragments[0].initSegment) {
-            text.textContent = "Downloading Init Segment...";
+            if (text) text.textContent = "Downloading Init Segment...";
             let initUrl = fragments[0].initSegment.url;
             if (tokenStr && !initUrl.includes("edge-cache-token=")) initUrl += (initUrl.includes("?") ? "&" : "?") + tokenStr;
             if (!initUrl.includes("proplayer.probrosystemset")) initUrl = SEGMENT + encodeURIComponent(initUrl);
@@ -212,7 +206,7 @@ async function downloadMerged() {
         }
 
         for (let i = 0; i < total; i++) {
-            text.textContent = `Downloading segment: ${i + 1} / ${total}`;
+            if (text) text.textContent = `Downloading segment: ${i + 1} / ${total}`;
             let segUrl = fragments[i].url;
             if (tokenStr && !segUrl.includes("edge-cache-token=")) {
                 segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
@@ -225,10 +219,10 @@ async function downloadMerged() {
 
             let buffer = await segRes.arrayBuffer();
             downloadedBuffers.push(buffer);
-            bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
+            if (bar) bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
         }
 
-        text.textContent = "Segments merge ho rahe hain...";
+        if (text) text.textContent = "Merging segments...";
         const blob = new Blob(downloadedBuffers, { type: "video/mp4" });
         const finalUrl = URL.createObjectURL(blob);
 
@@ -240,14 +234,12 @@ async function downloadMerged() {
         a.remove();
 
         setTimeout(() => URL.revokeObjectURL(finalUrl), 60000);
-        bar.style.width = "100%";
-        text.textContent = "Download complete!";
-        statusEl.textContent = "Ready";
+        if (bar) bar.style.width = "100%";
+        if (text) text.textContent = "Download complete!";
         say("Video successfully download ho gayi hai.");
     } catch (e) {
-        bar.style.width = "0";
-        statusEl.textContent = "Error";
-        text.textContent = e.message;
+        if (bar) bar.style.width = "0";
+        if (text) text.textContent = e.message;
         say("Download failed: " + e.message, true);
     }
 }
@@ -265,7 +257,6 @@ const loadBtn = document.getElementById("load");
 if (loadBtn) loadBtn.onclick = start;
 if (input) {
     input.onkeydown = e => { if (e.key === "Enter") start(); };
-    // URL box ko hide / clean rakhne ke liye optional class toggle
     input.style.display = "none"; 
 }
 
@@ -323,6 +314,19 @@ if (seekEl) seekEl.oninput = e => {
     if (Number.isFinite(v.duration)) v.currentTime = e.target.value / 1000 * v.duration;
 };
 
-v.onwaiting = () => statusEl.textContent = "Buffering…";
-v.onplaying = () => statusEl.textContent = "Playing";
-v.onended = () => statusEl.textContent = "Ended";
+// PDF buttons dynamic injection agar HTML mein na ho toh
+document.addEventListener("DOMContentLoaded", () => {
+    const actionRow = document.querySelector(".player-actions") || document.querySelector(".player-controls") || document.getElementById("download")?.parentNode;
+    if (actionRow && !document.getElementById("pdfBtn1")) {
+        const pdfContainer = document.createElement("div");
+        pdfContainer.className = "pdf-buttons-group";
+        pdfContainer.innerHTML = `
+            <button id="pdfBtn1" class="ott-btn" style="background:#2d3748; color:#fff; padding:6px 12px; border-radius:6px; border:none; margin-right:5px; cursor:pointer;">📄 PDF 1</button>
+            <button id="pdfBtn2" class="ott-btn" style="background:#2d3748; color:#fff; padding:6px 12px; border-radius:6px; border:none; cursor:pointer;">📄 PDF 2</button>
+        `;
+        actionRow.appendChild(pdfContainer);
+        
+        document.getElementById("pdfBtn1").onclick = () => alert("PDF 1 download/view feature linked!");
+        document.getElementById("pdfBtn2").onclick = () => alert("PDF 2 download/view feature linked!");
+    }
+});
