@@ -4,7 +4,6 @@
 
 body {
     margin: 0;
-    /* Asmani (Sky Blue) Vibrant Gradient Background */
     background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 50%, #e0f2fe 100%);
     background-attachment: fixed;
     color: #0f172a;
@@ -257,6 +256,87 @@ body {
     overflow: hidden;
     border: 3px solid #38bdf8;
     box-shadow: 0 10px 28px rgba(2, 132, 199, 0.3);
+    position: relative;
+}
+
+/* FULLSCREEN OVERLAY FIX */
+#hlsScreen:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: #000;
+}
+
+#hlsScreen:-webkit-full-screen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: #000;
+}
+
+#hlsScreen:fullscreen video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+#hlsScreen:-webkit-full-screen video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+/* Transparent Overlay Controls in Fullscreen */
+#hlsScreen:fullscreen .controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.85) 100%);
+    border-top: none;
+    backdrop-filter: blur(6px);
+}
+
+#hlsScreen:-webkit-full-screen .controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.85) 100%);
+    border-top: none;
+    backdrop-filter: blur(6px);
+}
+
+#hlsScreen:fullscreen .time-inline {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+#hlsScreen:fullscreen .ctrl-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 video {
