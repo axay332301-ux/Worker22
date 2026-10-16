@@ -2,7 +2,7 @@
 // RWA ADVANCED HLS PLAYER & DOWNLOADER ENGINE (player.js)
 // =========================================================
 // Termux Bridge Server URL
-const PROXY = "https://curriculum-improved-possession-hiring.trycloudflare.com/proxy?url=";
+const PROXY = "https://curriculum-improved-possession-hiring.trycloudflare.com/stream?url=";
 const SEGMENT = "https://curriculum-improved-possession-hiring.trycloudflare.com/proxy?url=";
 const v = document.getElementById("video");
 const input = document.getElementById("url");
