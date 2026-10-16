@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="style.css">
-    <!-- Official RWA Kokila Hindi Font for Test Series Questions & Solutions -->
     <style>
         @font-face {
             font-family: 'KOKILA';
@@ -21,7 +20,6 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Top Sky Glass Navbar (Visible on Home Hub, Auto-Hides on Inner Slides) -->
     <nav id="topHeaderNav" class="sky-nav sticky top-0 z-40 px-4 py-3 shadow-md">
         <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
             <div class="flex items-center gap-3 cursor-pointer" onclick="goHomeHub()">
@@ -37,7 +35,6 @@
                 <button onclick="openTestSeriesExplorer('free_ts')" class="btn-nav bg-teal-600 text-white border-0">📝 Free Tests</button>
                 <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0">🔑 Tokens (<span id="tokCountBadge">1</span>)</button>
                 
-                <!-- Login / Profile / Logout Navigation Buttons -->
                 <div id="navAuthArea" class="flex items-center gap-2">
                     <button id="navLoginBtn" onclick="openLoginModal()" class="btn-nav bg-blue-600 text-white border-0">🔐 Login</button>
                     <div id="navProfileArea" class="hidden flex items-center gap-2">
@@ -49,12 +46,8 @@
         </div>
     </nav>
 
-    <!-- Main Container for All Slides -->
     <main class="max-w-7xl w-full mx-auto p-3 sm:p-6 flex-1 relative overflow-x-hidden">
 
-        <!-- =========================================================
-             SLIDE 1: HOME HUB (ATTRACTIVE CARDS FOR ALL SECTIONS)
-             ========================================================= -->
         <section id="slideHome" class="slide-page active-slide">
             <div class="text-center max-w-2xl mx-auto mb-8 mt-2">
                 <span class="px-3.5 py-1 rounded-full bg-white/80 text-sky-900 font-extrabold text-xs uppercase tracking-wider shadow-sm">RWA All-In-One Cloud Portal</span>
@@ -63,7 +56,6 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                <!-- Card 1: Paid Batches -->
                 <div onclick="openExplorerSlide('paid')" class="hub-card hub-paid cursor-pointer">
                     <div class="hub-icon">🎓</div>
                     <span class="hub-badge">ALL TOKENS MERGED</span>
@@ -72,7 +64,6 @@
                     <div class="hub-btn mt-5">Open Paid Batches ➔</div>
                 </div>
 
-                <!-- Card 2: Free Batches -->
                 <div onclick="openExplorerSlide('free')" class="hub-card hub-free cursor-pointer">
                     <div class="hub-icon">🆓</div>
                     <span class="hub-badge">FREE COURSES</span>
@@ -81,7 +72,6 @@
                     <div class="hub-btn mt-5">Open Free Batches ➔</div>
                 </div>
 
-                <!-- Card 3: Paid Test Series -->
                 <div onclick="openTestSeriesExplorer('paid_ts')" class="hub-card hub-paid-ts cursor-pointer">
                     <div class="hub-icon">🏆</div>
                     <span class="hub-badge">OFFICIAL EXAM SERIES</span>
@@ -90,7 +80,6 @@
                     <div class="hub-btn mt-5">Explore Paid Tests ➔</div>
                 </div>
 
-                <!-- Card 4: Free Weekly Test Series -->
                 <div onclick="openTestSeriesExplorer('free_ts')" class="hub-card hub-free-ts cursor-pointer">
                     <div class="hub-icon">📝</div>
                     <span class="hub-badge">WEEKLY MOCK TESTS</span>
@@ -99,7 +88,6 @@
                     <div class="hub-btn mt-5">Attempt Free Tests ➔</div>
                 </div>
 
-                <!-- Card 5: Multi-Token Manager -->
                 <div onclick="openTokenSlide()" class="hub-card hub-token cursor-pointer sm:col-span-2 lg:col-span-1">
                     <div class="hub-icon">🔑</div>
                     <span class="hub-badge">MULTI-ACCOUNT SYNC</span>
@@ -110,11 +98,7 @@
             </div>
         </section>
 
-        <!-- =========================================================
-             SLIDE 2: BATCH / SUBJECT / TOPIC / TEST SERIES EXPLORER
-             ========================================================= -->
         <section id="slideExplorer" class="slide-page hidden-slide">
-            <!-- Top Navigation Banner inside Slide -->
             <div class="sky-banner flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
@@ -130,7 +114,6 @@
                 </div>
             </div>
 
-            <!-- Course Internal Sub-Tabs (Subjects, Live, Batch Tests, Telegram) -->
             <div id="subTabs" class="hidden flex gap-2.5 mb-6 pb-2 overflow-x-auto">
                 <button onclick="loadCourseTab('subjects')" id="sub_subjects" class="tab-pill active-pill">📚 Subjects</button>
                 <button onclick="loadCourseTab('live')" id="sub_live" class="tab-pill">🔴 Live & Upcoming</button>
@@ -138,17 +121,12 @@
                 <button onclick="loadCourseTab('telegram')" id="sub_telegram" class="tab-pill">✈️ Doubt Group</button>
             </div>
 
-            <!-- Dynamic Content Grid -->
             <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </section>
 
-        <!-- =========================================================
-             SLIDE 3: ASMANI SKY PLAYER + NEXT CLASSES / INLINE PDF
-             ========================================================= -->
+        <!-- SLIDE 3: PLAYER SECTION WITH TRANSPARENT OVERLAY CONTROLS -->
         <section id="slidePlayer" class="slide-page hidden-slide">
-            <!-- Asmani Sky Blue Player Card -->
             <div class="player-sky-card max-w-5xl mx-auto">
-                <!-- Player Header (Hidden in Fullscreen video mode) -->
                 <div id="playerHeaderBar" class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-3 border-b-2 border-sky-300/70">
                     <div class="flex items-center gap-2.5 min-w-0">
                         <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse shrink-0"></span>
@@ -159,20 +137,17 @@
                     </div>
                 </div>
 
-                <!-- Hidden URL Input -->
                 <input id="url" type="hidden" value="">
 
-                <!-- Video Screen & Controls -->
                 <div class="w-full">
+                    <!-- Video Screen containing absolute overlay transparent controls -->
                     <div id="hlsScreen" class="screen relative">
-                        <!-- Smooth Spinner Overlay while Buffering -->
                         <div id="bufferLoader" class="buffer-overlay hidden">
                             <div class="spinner-ring"></div>
                         </div>
 
                         <video id="video" playsinline preload="metadata"></video>
 
-                        <!-- Compact Settings Popup (Only Current Video Qualities + Speed) -->
                         <div id="settingsMenu" class="ott-settings-popup">
                             <div class="sett-header">
                                 <span>⚙️ Quality & Speed</span>
@@ -197,15 +172,13 @@
                             </div>
                         </div>
 
-                        <!-- Asmani Sky Controls Bar -->
+                        <!-- YouTube-style Transparent Overlay Controls Bar -->
                         <div id="playerControlsBar" class="controls">
-                            <!-- Seekbar & Timing on the exact same line -->
                             <div class="seek-row">
                                 <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
                                 <span id="time" class="time-inline">00:00 / 00:00</span>
                             </div>
 
-                            <!-- Attractive Control Buttons Row -->
                             <div class="buttons-row">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <button id="back" class="ctrl-btn" title="10s Back">⏪ 10s</button>
@@ -215,10 +188,8 @@
                                 </div>
 
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <!-- PDF 1 & PDF 2 Buttons (Opens PDF right below player in place of Next Classes) -->
                                     <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
                                     <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
-
                                     <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
                                     <button id="download" class="ctrl-btn dl-btn" title="Download Video">⬇ Save</button>
                                     <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
@@ -228,12 +199,10 @@
                         </div>
                     </div>
 
-                    <!-- YouTube Embed Screen (For Free Classes) -->
                     <div id="ytScreen" class="screen hidden aspect-video">
                         <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                     </div>
 
-                    <!-- Download Progress Bar -->
                     <div id="downloadBox" class="progressBox">
                         <div id="downloadText" class="text-xs text-slate-900 font-extrabold mb-1">Preparing download…</div>
                         <div class="bar"><i id="bar"></i></div>
@@ -241,12 +210,7 @@
                 </div>
             </div>
 
-            <!-- =========================================================
-                 BELOW PLAYER DYNAMIC AREA: NEXT CLASSES OR INLINE PDF
-                 ========================================================= -->
             <div id="playerBottomSection" class="max-w-5xl mx-auto mt-6">
-                
-                <!-- VIEW A: NEXT CLASSES LIST (Default visible below player) -->
                 <div id="nextClassesBox" class="sky-card p-5">
                     <div class="flex justify-between items-center mb-4 pb-2 border-b border-sky-200">
                         <div>
@@ -258,7 +222,6 @@
                     <div id="nextClassesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                 </div>
 
-                <!-- VIEW B: INLINE PDF VIEWER (Replaces Next Classes when PDF 1 or PDF 2 is clicked) -->
                 <div id="inlinePdfBox" class="sky-card p-4 hidden">
                     <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b border-sky-200">
                         <div class="flex items-center gap-2 min-w-0">
@@ -274,16 +237,11 @@
                     </div>
                     <iframe id="inlinePdfFrame" class="w-full h-[75vh] bg-slate-900 rounded-2xl border-2 border-sky-300" src="" frameborder="0"></iframe>
                 </div>
-
             </div>
         </section>
 
-        <!-- =========================================================
-             SLIDE 4: LIVE CBT TEST SERIES ENGINE & SOLUTIONS SLIDE
-             ========================================================= -->
         <section id="slideTestAttempt" class="slide-page hidden-slide">
             <div class="max-w-6xl mx-auto">
-                <!-- Test Top Bar -->
                 <div class="sky-banner flex flex-wrap justify-between items-center gap-3 mb-5">
                     <div>
                         <span id="cbtSeriesBadge" class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-black text-[10px] uppercase">LIVE CBT EXAM</span>
@@ -296,7 +254,6 @@
                     </div>
                 </div>
 
-                <!-- Result Summary Card (Hidden during attempt, shown after Submit) -->
                 <div id="cbtResultCard" class="hidden sky-card p-5 mb-5 border-2 border-emerald-400">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <div>
@@ -312,12 +269,9 @@
                     </div>
                 </div>
 
-                <!-- Main CBT Layout: Left Question Card + Right Palette -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <!-- Question & Options Area (2 Cols) -->
                     <div class="lg:col-span-2 sky-card p-5 flex flex-col justify-between min-h-[420px]">
                         <div>
-                            <!-- Question Header -->
                             <div class="flex justify-between items-center pb-3 mb-4 border-b border-sky-200">
                                 <span id="cbtQNumber" class="font-black text-base text-blue-700">Question 1 of 50</span>
                                 <div class="flex items-center gap-2 text-xs font-bold">
@@ -325,21 +279,14 @@
                                     <span id="cbtNegMarks" class="px-2.5 py-0.5 rounded-lg bg-rose-100 text-rose-800">-0.50</span>
                                 </div>
                             </div>
-
-                            <!-- Question HTML Content (Supports Kokila Hindi Font & Images) -->
                             <div id="cbtQuestionHtml" class="cbt-rich-text text-slate-900 mb-5"></div>
-
-                            <!-- Options List -->
                             <div id="cbtOptionsList" class="space-y-3"></div>
-
-                            <!-- Detailed Solution Box (Shown in Solution / Review Mode after Submit) -->
                             <div id="cbtSolutionBox" class="hidden mt-6 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300">
                                 <div class="font-black text-xs text-emerald-900 uppercase mb-2">💡 Official Full Solution:</div>
                                 <div id="cbtSolutionHtml" class="cbt-rich-text text-slate-900"></div>
                             </div>
                         </div>
 
-                        <!-- Bottom Navigation Buttons for Question -->
                         <div class="flex flex-wrap justify-between items-center gap-2 pt-5 mt-6 border-t border-sky-200">
                             <div class="flex gap-2">
                                 <button onclick="prevCbtQuestion()" class="btn-nav bg-slate-800 text-white border-0">⬅ Previous</button>
@@ -349,7 +296,6 @@
                         </div>
                     </div>
 
-                    <!-- Question Palette Area (1 Col) -->
                     <div class="sky-card p-5 flex flex-col max-h-[75vh]">
                         <h4 class="font-black text-sm text-slate-900 pb-2 mb-3 border-b border-sky-200">🔢 Question Palette</h4>
                         <div class="flex gap-3 text-[11px] font-bold text-slate-700 mb-3 flex-wrap">
@@ -363,9 +309,6 @@
             </div>
         </section>
 
-        <!-- =========================================================
-             SLIDE 5: MULTI-TOKEN MANAGER SLIDE
-             ========================================================= -->
         <section id="slideTokens" class="slide-page hidden-slide">
             <div class="max-w-3xl mx-auto sky-card p-6">
                 <div class="flex justify-between items-center pb-4 mb-4 border-b border-sky-200">
@@ -377,7 +320,6 @@
                     <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0">🏠 Home</button>
                 </div>
 
-                <!-- Add New Token Form -->
                 <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-6">
                     <h4 class="font-extrabold text-sm text-slate-800 mb-3">➕ Add New Account Token</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -397,7 +339,6 @@
                     <button onclick="addNewToken()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs border-0 shadow-md">💾 Save & Add Token</button>
                 </div>
 
-                <!-- Saved Tokens List -->
                 <div>
                     <h4 class="font-extrabold text-sm text-slate-800 mb-3">📋 Active Saved Tokens</h4>
                     <div id="tokenListContainer" class="space-y-3"></div>
@@ -405,9 +346,6 @@
             </div>
         </section>
 
-        <!-- =========================================================
-             SLIDE 6: STANDALONE PDF VIEWER SLIDE (For Lecture List / Test PDFs)
-             ========================================================= -->
         <section id="slidePdf" class="slide-page hidden-slide">
             <div class="sky-card p-4">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b border-sky-200">
@@ -425,10 +363,6 @@
 
     </main>
 
-    <!-- =========================================================
-         LOGIN & USER PROFILE MODALS
-         ========================================================= -->
-    <!-- Login Modal -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-sky-200 animate-slideInSmooth">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
@@ -449,16 +383,13 @@
         </div>
     </div>
 
-    <!-- Profile Modal -->
     <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-emerald-200 animate-slideInSmooth">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <h3 class="font-black text-lg text-slate-900">👤 User Profile Details</h3>
                 <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-700 font-black text-lg">✕</button>
             </div>
-            <div id="profileDetailsContent" class="space-y-3 text-sm text-slate-700">
-                <!-- Dynamically populated from /get/get_user_dt API -->
-            </div>
+            <div id="profileDetailsContent" class="space-y-3 text-sm text-slate-700"></div>
             <div class="mt-6 pt-4 border-t border-slate-100 flex justify-end">
                 <button onclick="closeProfileModal()" class="btn-nav bg-slate-900 text-white border-0">Close</button>
             </div>
