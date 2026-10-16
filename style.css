@@ -1,3 +1,6 @@
+/* ========================================================= */
+/* RWA ULTIMATE OTT & PORTAL DESIGN (style.css)             */
+/* ========================================================= */
 * {
     box-sizing: border-box;
 }
@@ -129,35 +132,7 @@ video {
 }
 
 .msg {
-    font-size: 12px;
-    color: #98a4b6;
-    margin-top: 10px;
-    line-height: 1.5;
-}
-
-.progressBox {
-    display: none;
-    margin-top: 10px;
-}
-
-.progressBox.show {
-    display: block;
-}
-
-.bar {
-    height: 8px;
-    background: #202a38;
-    border-radius: 99px;
-    overflow: hidden;
-    margin-top: 4px;
-}
-
-.bar i {
-    display: block;
-    height: 100%;
-    width: 0;
-    background: #4777ff;
-    transition: width 0.2s ease;
+    display: none; /* Clean look ke liye hidden */
 }
 
 @media (max-width: 600px) {
@@ -166,8 +141,5 @@ video {
     }
     .form button {
         width: 100%;
-    }
-    .logo {
-        font-size: 16px;
     }
 }
