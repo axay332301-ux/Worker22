@@ -3,98 +3,129 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>RWA Sky Pro Portal - Ultimate Edition</title>
+    <title>RWA Sky Pro Portal - Courses, Player & Live CBT Test Series</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="style.css">
+    <!-- Official RWA Kokila Hindi Font for Test Series Questions & Solutions -->
+    <style>
+        @font-face {
+            font-family: 'KOKILA';
+            src: url('https://appxcontent.kaxa.in/fonts/kokila.ttf') format('truetype'),
+                 url('https://static-appxdb-v2.akamai.net.in/fonts/kokila.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Top Sky Glass Navbar (Only visible on Home Slide, auto-hides on inner slides) -->
+    <!-- Top Sky Glass Navbar (Visible on Home Hub, Auto-Hides on Inner Slides) -->
     <nav id="topHeaderNav" class="sky-nav sticky top-0 z-40 px-4 py-3 shadow-md">
         <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
             <div class="flex items-center gap-3 cursor-pointer" onclick="goHomeHub()">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30">R</div>
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">R</div>
                 <div>
                     <div class="font-extrabold text-lg leading-none text-slate-900 tracking-tight">RWA SKY PORTAL</div>
-                    <div id="apiStatus" class="text-[11px] font-bold text-emerald-600 mt-0.5">● Live Multi-Token Ready</div>
+                    <div id="apiStatus" class="text-[11px] font-bold text-emerald-600 mt-0.5">● Live Server Connected</div>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="openTestSeriesExplorer('paid_ts')" class="btn-nav bg-indigo-600 text-white border-0">🏆 Paid Tests</button>
+                <button onclick="openTestSeriesExplorer('free_ts')" class="btn-nav bg-teal-600 text-white border-0">📝 Free Tests</button>
                 <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0">🔑 Tokens (<span id="tokCountBadge">1</span>)</button>
-                <button onclick="openTestModal()" class="btn-nav bg-purple-600 text-white border-0">📝 Mock Test</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Container for Slides -->
-    <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 flex-1 relative overflow-x-hidden">
+    <!-- Main Container for All Slides -->
+    <main class="max-w-7xl w-full mx-auto p-3 sm:p-6 flex-1 relative overflow-x-hidden">
 
-        <!-- ==========================================
-             SLIDE 1: HOME HUB (3 BIG ATTRACTIVE CARDS)
-             ========================================== -->
+        <!-- =========================================================
+             SLIDE 1: HOME HUB (ATTRACTIVE CARDS FOR ALL SECTIONS)
+             ========================================================= -->
         <section id="slideHome" class="slide-page active-slide">
             <div class="text-center max-w-2xl mx-auto mb-8 mt-2">
-                <span class="px-3 py-1 rounded-full bg-sky-200/80 text-sky-900 font-extrabold text-xs uppercase tracking-wider">Welcome to Ultimate Learning</span>
-                <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Choose Your Portal Section</h1>
-                <p class="text-slate-600 text-sm mt-1">Sabhi tokens ke courses, HD streaming aur PDF notes ek hi jagah.</p>
+                <span class="px-3.5 py-1 rounded-full bg-white/80 text-sky-900 font-extrabold text-xs uppercase tracking-wider shadow-sm">RWA All-In-One Cloud Portal</span>
+                <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Select Your Study Zone</h1>
+                <p class="text-slate-700 text-sm font-medium mt-1">Paid Batches, Free Classes, Official Paid/Free Test Series aur Multi-Token Sync.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                 <!-- Card 1: Paid Batches -->
                 <div onclick="openExplorerSlide('paid')" class="hub-card hub-paid cursor-pointer">
                     <div class="hub-icon">🎓</div>
                     <span class="hub-badge">ALL TOKENS MERGED</span>
                     <h2 class="text-2xl font-black mt-2">Paid Batches</h2>
-                    <p class="text-sm opacity-90 mt-1">Jitne bhi tokens add kiye hain, un sabhi ke Purchased Batches yahan dekhein.</p>
-                    <div class="hub-btn mt-5">Explore Paid Batches ➔</div>
+                    <p class="text-sm opacity-95 mt-1">Sabhi added tokens ke Purchased Batches, Live Classes, PDFs aur Batch Tests.</p>
+                    <div class="hub-btn mt-5">Open Paid Batches ➔</div>
                 </div>
 
                 <!-- Card 2: Free Batches -->
                 <div onclick="openExplorerSlide('free')" class="hub-card hub-free cursor-pointer">
                     <div class="hub-icon">🆓</div>
-                    <span class="hub-badge">OPEN FOR ALL</span>
+                    <span class="hub-badge">FREE COURSES</span>
                     <h2 class="text-2xl font-black mt-2">Free Batches</h2>
-                    <p class="text-sm opacity-90 mt-1">RWA ke sabhi free courses, marathon classes aur YouTube series.</p>
-                    <div class="hub-btn mt-5">Explore Free Batches ➔</div>
+                    <p class="text-sm opacity-95 mt-1">RWA ke sabhi free courses, marathon classes aur revision series.</p>
+                    <div class="hub-btn mt-5">Open Free Batches ➔</div>
                 </div>
 
-                <!-- Card 3: Tokens Manager -->
-                <div onclick="openTokenSlide()" class="hub-card hub-token cursor-pointer">
+                <!-- Card 3: Paid Test Series -->
+                <div onclick="openTestSeriesExplorer('paid_ts')" class="hub-card hub-paid-ts cursor-pointer">
+                    <div class="hub-icon">🏆</div>
+                    <span class="hub-badge">OFFICIAL EXAM SERIES</span>
+                    <h2 class="text-2xl font-black mt-2">Paid Test Series</h2>
+                    <p class="text-sm opacity-95 mt-1">SSC, Police, BSF, UPPCS, NDA aur sabhi exams ki official Paid Test Series & PDFs.</p>
+                    <div class="hub-btn mt-5">Explore Paid Tests ➔</div>
+                </div>
+
+                <!-- Card 4: Free Weekly Test Series -->
+                <div onclick="openTestSeriesExplorer('free_ts')" class="hub-card hub-free-ts cursor-pointer">
+                    <div class="hub-icon">📝</div>
+                    <span class="hub-badge">WEEKLY MOCK TESTS</span>
+                    <h2 class="text-2xl font-black mt-2">Free Test Series</h2>
+                    <p class="text-sm opacity-95 mt-1">UP Police, PET, RRB NTPC, SSC CGL aur sabhi Free Weekly Mock Tests.</p>
+                    <div class="hub-btn mt-5">Attempt Free Tests ➔</div>
+                </div>
+
+                <!-- Card 5: Multi-Token Manager -->
+                <div onclick="openTokenSlide()" class="hub-card hub-token cursor-pointer sm:col-span-2 lg:col-span-1">
                     <div class="hub-icon">🔑</div>
-                    <span class="hub-badge">MULTI-ACCOUNT</span>
+                    <span class="hub-badge">MULTI-ACCOUNT SYNC</span>
                     <h2 class="text-2xl font-black mt-2">Tokens Manager</h2>
-                    <p class="text-sm opacity-90 mt-1">Naye Authorization Tokens jodein ya purane manage karein.</p>
+                    <p class="text-sm opacity-95 mt-1">Multiple RWA tokens add karein taaki sabhi accounts ke batches ek sath dikhein.</p>
                     <div class="hub-btn mt-5">Manage Tokens ➔</div>
                 </div>
             </div>
         </section>
 
-        <!-- ==========================================
-             SLIDE 2: COURSE / SUBJECT / LECTURE EXPLORER
-             ========================================== -->
+        <!-- =========================================================
+             SLIDE 2: BATCH / SUBJECT / TOPIC / TEST SERIES EXPLORER
+             ========================================================= -->
         <section id="slideExplorer" class="slide-page hidden-slide">
-            <!-- Header & Search Bar -->
+            <!-- Top Navigation Banner inside Slide -->
             <div class="sky-banner flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0 text-xs">🏠 Home</button>
-                        <button onclick="handleGlobalBack()" class="btn-nav bg-blue-600 text-white border-0 text-xs">⬅ Back</button>
+                        <button onclick="handleGlobalBack()" class="btn-nav bg-sky-600 text-white border-0 text-xs">⬅ Back</button>
                         <span id="crumbText" class="px-3 py-1 rounded-full bg-sky-200 text-sky-950 font-extrabold text-[11px] uppercase">Explorer</span>
                     </div>
                     <h2 id="headingText" class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">All Batches</h2>
                 </div>
-                <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search batch, subject or class..." 
-                       class="w-full sm:w-72 bg-white/90 border-2 border-sky-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 font-medium shadow-sm outline-none focus:border-blue-600">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search batch, subject, class or test..." 
+                           class="w-full sm:w-72 bg-white border-2 border-sky-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 font-medium shadow-sm outline-none focus:border-blue-600">
+                </div>
             </div>
 
-            <!-- Course Sub-Tabs (Subjects, Live, Tests, Telegram) -->
+            <!-- Course Internal Sub-Tabs (Subjects, Live, Batch Tests, Telegram) -->
             <div id="subTabs" class="hidden flex gap-2.5 mb-6 pb-2 overflow-x-auto">
                 <button onclick="loadCourseTab('subjects')" id="sub_subjects" class="tab-pill active-pill">📚 Subjects</button>
                 <button onclick="loadCourseTab('live')" id="sub_live" class="tab-pill">🔴 Live & Upcoming</button>
-                <button onclick="loadCourseTab('tests')" id="sub_tests" class="tab-pill">📝 Test Series</button>
+                <button onclick="loadCourseTab('tests')" id="sub_tests" class="tab-pill">📝 Batch Tests</button>
                 <button onclick="loadCourseTab('telegram')" id="sub_telegram" class="tab-pill">✈️ Doubt Group</button>
             </div>
 
@@ -102,16 +133,17 @@
             <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </section>
 
-        <!-- ==========================================
-             SLIDE 3: DEDICATED FULL-WIDTH PLAYER SLIDE (NO COMMENTS)
-             ========================================== -->
+        <!-- =========================================================
+             SLIDE 3: ASMANI SKY PLAYER + NEXT CLASSES / INLINE PDF
+             ========================================================= -->
         <section id="slidePlayer" class="slide-page hidden-slide">
-            <div class="player-glass-card max-w-5xl mx-auto">
-                <!-- Player Top Bar -->
-                <div class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-3 border-b border-sky-200/40">
+            <!-- Asmani Sky Blue Player Card -->
+            <div class="player-sky-card max-w-5xl mx-auto">
+                <!-- Player Header -->
+                <div class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-3 border-b-2 border-sky-300/70">
                     <div class="flex items-center gap-2.5 min-w-0">
-                        <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-                        <h3 id="playingTitle" class="font-extrabold text-base sm:text-lg text-white truncate">▶ Class Video</h3>
+                        <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse shrink-0"></span>
+                        <h3 id="playingTitle" class="font-black text-base sm:text-lg text-slate-900 truncate">▶ Class Video</h3>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="closePlayerBox()" id="closePlayerBtn" class="btn-close-player">✖ Close Player</button>
@@ -121,30 +153,30 @@
                 <!-- Hidden URL Input -->
                 <input id="url" type="hidden" value="">
 
-                <!-- Full Width Video & Controls -->
+                <!-- Video Screen & Controls -->
                 <div class="w-full">
                     <div id="hlsScreen" class="screen relative">
-                        <!-- Buffering Spinner Overlay -->
+                        <!-- Smooth Spinner Overlay while Buffering -->
                         <div id="bufferLoader" class="buffer-overlay hidden">
                             <div class="spinner-ring"></div>
                         </div>
 
                         <video id="video" playsinline preload="metadata"></video>
 
-                        <!-- Settings Popup Menu (Quality + Speed inside one ⚙️ button) -->
+                        <!-- Compact Settings Popup (Only Current Video Qualities + Speed) -->
                         <div id="settingsMenu" class="ott-settings-popup">
                             <div class="sett-header">
-                                <span>⚙️ Stream Settings</span>
+                                <span>⚙️ Quality & Speed</span>
                                 <button onclick="toggleSettingsMenu()" class="sett-close">✕</button>
                             </div>
                             <div class="sett-section">
-                                <div class="sett-title">🎬 Video Quality (240p - 720p)</div>
+                                <div class="sett-title">🎬 Video Quality</div>
                                 <div id="qualityList" class="sett-options">
-                                    <div class="q-option active">Auto</div>
+                                    <div class="q-option active">720p</div>
                                 </div>
                             </div>
-                            <div class="sett-section mt-3">
-                                <div class="sett-title">⚡ Playback Speed</div>
+                            <div class="sett-section mt-2.5">
+                                <div class="sett-title">⚡ Speed</div>
                                 <div class="sett-options">
                                     <div class="spd-option" onclick="changeSpd(0.5, this)">0.5x</div>
                                     <div class="spd-option" onclick="changeSpd(0.75, this)">0.75x</div>
@@ -156,9 +188,9 @@
                             </div>
                         </div>
 
-                        <!-- Sleek Bottom Controls Bar -->
+                        <!-- Asmani Sky Controls Bar -->
                         <div class="controls">
-                            <!-- Seekbar & Timing on the SAME LINE inside video bar -->
+                            <!-- Seekbar & Timing on the exact same line -->
                             <div class="seek-row">
                                 <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
                                 <span id="time" class="time-inline">00:00 / 00:00</span>
@@ -174,12 +206,12 @@
                                 </div>
 
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <!-- Dynamic Lecture PDF Buttons inside Player -->
+                                    <!-- PDF 1 & PDF 2 Buttons (Opens PDF right below player in place of Next Classes) -->
                                     <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
                                     <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
-                                    
+
                                     <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
-                                    <button id="download" class="ctrl-btn dl-btn" title="Download MP4">⬇ Save</button>
+                                    <button id="download" class="ctrl-btn dl-btn" title="Download Video">⬇ Save</button>
                                     <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
                                     <button id="fs" class="ctrl-btn" title="Fullscreen">⛶</button>
                                 </div>
@@ -187,32 +219,153 @@
                         </div>
                     </div>
 
-                    <!-- YouTube Embed Screen -->
+                    <!-- YouTube Embed Screen (For Free Classes) -->
                     <div id="ytScreen" class="screen hidden aspect-video">
                         <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                     </div>
 
-                    <!-- Download Progress Box -->
+                    <!-- Download Progress Bar -->
                     <div id="downloadBox" class="progressBox">
-                        <div id="downloadText" class="text-xs text-sky-200 font-bold mb-1">Preparing download…</div>
+                        <div id="downloadText" class="text-xs text-slate-900 font-extrabold mb-1">Preparing download…</div>
                         <div class="bar"><i id="bar"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 BELOW PLAYER DYNAMIC AREA: NEXT CLASSES OR INLINE PDF
+                 ========================================================= -->
+            <div id="playerBottomSection" class="max-w-5xl mx-auto mt-6">
+                
+                <!-- VIEW A: NEXT CLASSES LIST (Default visible below player) -->
+                <div id="nextClassesBox" class="sky-card p-5">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b border-sky-200">
+                        <div>
+                            <span class="text-[10px] font-black text-sky-700 uppercase">Up Next in Topic</span>
+                            <h4 class="font-black text-lg text-slate-900">⏭️ Next Classes</h4>
+                        </div>
+                        <span id="nextClassesCount" class="px-3 py-1 rounded-full bg-sky-100 text-sky-900 font-extrabold text-xs">0 Classes</span>
+                    </div>
+                    <div id="nextClassesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- VIEW B: INLINE PDF VIEWER (Replaces Next Classes when PDF 1 or PDF 2 is clicked) -->
+                <div id="inlinePdfBox" class="sky-card p-4 hidden">
+                    <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b border-sky-200">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <button onclick="switchBottomToNextClasses()" class="btn-nav bg-slate-900 text-white border-0 text-xs shrink-0">⏭️ Back to Next Classes</button>
+                            <h4 id="inlinePdfTitle" class="font-extrabold text-slate-900 text-sm truncate">📄 Class Notes PDF</h4>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button onclick="setInlinePdfMode('appx')" class="btn-nav bg-blue-600 text-white border-0 text-xs">AppX Viewer</button>
+                            <button onclick="setInlinePdfMode('gdocs')" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Google Viewer</button>
+                            <a id="inlineRawPdfLink" href="#" target="_blank" class="btn-nav bg-amber-500 text-white border-0 text-xs no-underline">📥 Download</a>
+                            <button onclick="switchBottomToNextClasses()" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close PDF</button>
+                        </div>
+                    </div>
+                    <iframe id="inlinePdfFrame" class="w-full h-[75vh] bg-slate-900 rounded-2xl border-2 border-sky-300" src="" frameborder="0"></iframe>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- =========================================================
+             SLIDE 4: LIVE CBT TEST SERIES ENGINE & SOLUTIONS SLIDE
+             ========================================================= -->
+        <section id="slideTestAttempt" class="slide-page hidden-slide">
+            <div class="max-w-6xl mx-auto">
+                <!-- Test Top Bar -->
+                <div class="sky-banner flex flex-wrap justify-between items-center gap-3 mb-5">
+                    <div>
+                        <span id="cbtSeriesBadge" class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-black text-[10px] uppercase">LIVE CBT EXAM</span>
+                        <h2 id="cbtTestTitle" class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">Mock Test</h2>
+                    </div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <div id="cbtTimerBadge" class="px-4 py-2 rounded-2xl bg-slate-900 text-amber-300 font-black text-sm tracking-wider shadow-md">⏱️ 60:00</div>
+                        <button id="cbtSubmitBtn" onclick="submitCbtTest()" class="btn-nav bg-emerald-600 text-white border-0 text-xs px-4 py-2.5">✅ Submit Test</button>
+                        <button onclick="exitCbtTest()" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Exit</button>
+                    </div>
+                </div>
+
+                <!-- Result Summary Card (Hidden during attempt, shown after Submit) -->
+                <div id="cbtResultCard" class="hidden sky-card p-5 mb-5 border-2 border-emerald-400">
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <div>
+                            <span class="text-xs font-black text-emerald-700 uppercase">🎉 Test Submitted Successfully — Full Solutions Unlocked Below</span>
+                            <h3 id="cbtFinalScoreText" class="text-2xl font-black text-slate-900 mt-1">Score: 0 / 0</h3>
+                        </div>
+                        <div class="flex gap-3 flex-wrap text-xs font-extrabold">
+                            <span id="cbtStatCorrect" class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-900">✅ Correct: 0</span>
+                            <span id="cbtStatWrong" class="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900">❌ Wrong: 0</span>
+                            <span id="cbtStatSkip" class="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-800">⚪ Skipped: 0</span>
+                            <button onclick="reAttemptCbtTest()" class="btn-nav bg-blue-600 text-white border-0">🔄 Re-Attempt</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main CBT Layout: Left Question Card + Right Palette -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <!-- Question & Options Area (2 Cols) -->
+                    <div class="lg:col-span-2 sky-card p-5 flex flex-col justify-between min-h-[420px]">
+                        <div>
+                            <!-- Question Header -->
+                            <div class="flex justify-between items-center pb-3 mb-4 border-b border-sky-200">
+                                <span id="cbtQNumber" class="font-black text-base text-blue-700">Question 1 of 50</span>
+                                <div class="flex items-center gap-2 text-xs font-bold">
+                                    <span id="cbtPosMarks" class="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-800">+2.0</span>
+                                    <span id="cbtNegMarks" class="px-2.5 py-0.5 rounded-lg bg-rose-100 text-rose-800">-0.50</span>
+                                </div>
+                            </div>
+
+                            <!-- Question HTML Content (Supports Kokila Hindi Font & Images) -->
+                            <div id="cbtQuestionHtml" class="cbt-rich-text text-slate-900 mb-5"></div>
+
+                            <!-- Options List -->
+                            <div id="cbtOptionsList" class="space-y-3"></div>
+
+                            <!-- Detailed Solution Box (Shown in Solution / Review Mode after Submit) -->
+                            <div id="cbtSolutionBox" class="hidden mt-6 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300">
+                                <div class="font-black text-xs text-emerald-900 uppercase mb-2">💡 Official Full Solution:</div>
+                                <div id="cbtSolutionHtml" class="cbt-rich-text text-slate-900"></div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Navigation Buttons for Question -->
+                        <div class="flex flex-wrap justify-between items-center gap-2 pt-5 mt-6 border-t border-sky-200">
+                            <div class="flex gap-2">
+                                <button onclick="prevCbtQuestion()" class="btn-nav bg-slate-800 text-white border-0">⬅ Previous</button>
+                                <button onclick="clearCbtResponse()" id="cbtClearBtn" class="btn-nav bg-amber-500 text-white border-0">🧹 Clear</button>
+                            </div>
+                            <button onclick="nextCbtQuestion()" class="btn-nav bg-blue-600 text-white border-0 px-5">Save & Next ➔</button>
+                        </div>
+                    </div>
+
+                    <!-- Question Palette Area (1 Col) -->
+                    <div class="sky-card p-5 flex flex-col max-h-[75vh]">
+                        <h4 class="font-black text-sm text-slate-900 pb-2 mb-3 border-b border-sky-200">🔢 Question Palette</h4>
+                        <div class="flex gap-3 text-[11px] font-bold text-slate-700 mb-3 flex-wrap">
+                            <span class="flex items-center gap-1"><i class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></i> Answered</span>
+                            <span class="flex items-center gap-1"><i class="w-3 h-3 rounded-full bg-rose-500 inline-block"></i> Wrong (Result)</span>
+                            <span class="flex items-center gap-1"><i class="w-3 h-3 rounded-full bg-slate-300 inline-block"></i> Unvisited</span>
+                        </div>
+                        <div id="cbtPaletteGrid" class="grid grid-cols-5 sm:grid-cols-6 gap-2 overflow-y-auto p-1 flex-1"></div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ==========================================
-             SLIDE 4: MULTI-TOKEN MANAGER SLIDE
-             ========================================== -->
+        <!-- =========================================================
+             SLIDE 5: MULTI-TOKEN MANAGER SLIDE
+             ========================================================= -->
         <section id="slideTokens" class="slide-page hidden-slide">
             <div class="max-w-3xl mx-auto sky-card p-6">
                 <div class="flex justify-between items-center pb-4 mb-4 border-b border-sky-200">
                     <div>
                         <span class="text-xs font-extrabold text-amber-600 uppercase">Multi-Account Sync</span>
                         <h2 class="text-2xl font-black text-slate-900">🔑 Manage Auth Tokens</h2>
-                        <p class="text-xs text-slate-600 mt-0.5">Yahan jitne bhi tokens add karenge, Paid Batches mein un sabhi ke courses ek sath dikhenge.</p>
+                        <p class="text-xs text-slate-600 mt-0.5">Jitne bhi tokens add karenge, Paid Batches mein un sabhi ke courses ek sath merge hoke dikhenge.</p>
                     </div>
-                    <button onclick="goHomeHub()" class="btn-nav bg-slate-800 text-white border-0">🏠 Home</button>
+                    <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0">🏠 Home</button>
                 </div>
 
                 <!-- Add New Token Form -->
@@ -243,13 +396,13 @@
             </div>
         </section>
 
-        <!-- ==========================================
-             SLIDE 5: DEDICATED PDF VIEWER SLIDE
-             ========================================== -->
+        <!-- =========================================================
+             SLIDE 6: STANDALONE PDF VIEWER SLIDE (For Lecture List / Test PDFs)
+             ========================================================= -->
         <section id="slidePdf" class="slide-page hidden-slide">
             <div class="sky-card p-4">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b border-sky-200">
-                    <h3 id="pdfTitle" class="font-extrabold text-slate-900 text-sm sm:text-base truncate">📄 PDF Class Notes</h3>
+                    <h3 id="pdfTitle" class="font-extrabold text-slate-900 text-sm sm:text-base truncate">📄 PDF Document</h3>
                     <div class="flex items-center gap-2 flex-wrap">
                         <button onclick="setPdfMode('appx')" class="btn-nav bg-blue-600 text-white border-0 text-xs">AppX Viewer</button>
                         <button onclick="setPdfMode('gdocs')" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Google Viewer</button>
@@ -262,24 +415,6 @@
         </section>
 
     </main>
-
-    <!-- Mock Test Modal -->
-    <div id="testModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="sky-card max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden p-5">
-            <div class="flex justify-between items-center pb-3 border-b border-sky-200">
-                <div>
-                    <span class="text-[10px] text-purple-700 font-extrabold uppercase">RWA Mock Test Series</span>
-                    <h3 class="font-black text-lg text-slate-900">Polity & GS Practice Set</h3>
-                </div>
-                <button onclick="toggleModal('testModal')" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close</button>
-            </div>
-            <div id="quizContainer" class="py-4 overflow-y-auto space-y-4 flex-1 text-slate-800"></div>
-            <div class="pt-3 border-t border-sky-200 flex justify-between items-center">
-                <span id="quizScoreText" class="font-extrabold text-blue-700 text-sm">Score: 0 / 3</span>
-                <button onclick="renderQuiz()" class="btn-nav bg-blue-600 text-white border-0 text-xs">🔄 Re-Attempt</button>
-            </div>
-        </div>
-    </div>
 
     <script src="player.js"></script>
     <script src="app.js"></script>
