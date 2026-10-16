@@ -1,7 +1,6 @@
 // =========================================================
 // RWA ADVANCED HLS PLAYER & DOWNLOADER ENGINE (player.js)
 // =========================================================
-// Termux Bridge Server URL
 const PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 const SEGMENT = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
 const v = document.getElementById("video");
@@ -44,18 +43,16 @@ class BackendLoader extends Hls.DefaultConfig.loader {
         let originalUrl = ctx.url;
         let mainUrl = input.value.trim();
 
-        // 1. Main input URL se token extract karke cache karna[span_7](start_span)[span_7](end_span)
         let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
         if (match) {
             cachedToken = match[1];
         }
 
-        // 2. Har segment URL ke sath automatic token jodna[span_8](start_span)[span_8](end_span)
         if (cachedToken && !originalUrl.includes("edge-cache-token=")) {
             originalUrl += (originalUrl.includes("?") ? "&" : "?") + cachedToken;
         }
 
-        if (segment(originalUrl) && !originalUrl.includes("proplayer.probrosystemset.workers.dev")) {
+        if (segment(originalUrl) && !originalUrl.includes("proplayer.allswbatch22.workers.dev")) {
             ctx.url = SEGMENT + encodeURIComponent(originalUrl);
         } else {
             ctx.url = originalUrl;
@@ -73,7 +70,8 @@ function stopPlayer() {
     v.pause();
     v.removeAttribute("src");
     v.load();
-    document.getElementById("ytFrame").src = "";
+    const ytFrame = document.getElementById("ytFrame");
+    if (ytFrame) ytFrame.src = "";
 }
 
 function start() {
@@ -94,7 +92,8 @@ function start() {
         if (raw.includes("v=")) ytId = raw.split("v=")[1].split("&")[0];
         else if (raw.includes("youtu.be/")) ytId = raw.split("youtu.be/")[1].split("?")[0];
 
-        document.getElementById("ytFrame").src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
+        const ytFrame = document.getElementById("ytFrame");
+        if (ytFrame) ytFrame.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
         statusEl.textContent = "Playing YouTube";
         say("YouTube class chal rahi hai.");
         return;
@@ -121,9 +120,32 @@ function start() {
             loader: BackendLoader
         });
         hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
             statusEl.textContent = "Ready";
             say("Stream ready.");
+            
+            // Quality Dropdown Dynamic Population
+            let qualitySel = document.getElementById("qualitySelect");
+            if (!qualitySel) {
+                qualitySel = document.createElement("select");
+                qualitySel.id = "qualitySelect";
+                qualitySel.className = "quality-dropdown";
+                qualitySel.onchange = (e) => {
+                    if (hls) hls.currentLevel = parseInt(e.target.value);
+                };
+                const controlsContainer = document.querySelector(".player-controls") || document.body;
+                controlsContainer.appendChild(qualitySel);
+            }
+
+            if (data.levels && data.levels.length > 0) {
+                qualitySel.innerHTML = '<option value="-1">Auto Quality</option>';
+                data.levels.forEach((lvl, idx) => {
+                    let qName = lvl.height ? `${lvl.height}p` : `Quality ${idx + 1}`;
+                    qualitySel.innerHTML += `<option value="${idx}">${qName}</option>`;
+                });
+                qualitySel.style.display = "inline-block";
+            }
+
             v.play().catch(() => {});
         });
         hls.on(Hls.Events.ERROR, (_, d) => {
@@ -239,39 +261,68 @@ function fmt(x) {
         : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-document.getElementById("load").onclick = start;
-input.onkeydown = e => { if (e.key === "Enter") start(); };
-document.getElementById("toggle").onclick = () => v.paused ? v.play() : v.pause();
-v.onplay = () => document.getElementById("toggle").textContent = "⏸";
-v.onpause = () => document.getElementById("toggle").textContent = "▶";
-document.getElementById("back").onclick = () => v.currentTime = Math.max(0, v.currentTime - 10);
-document.getElementById("next").onclick = () => v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10);
-document.getElementById("mute").onclick = () => {
+const loadBtn = document.getElementById("load");
+if (loadBtn) loadBtn.onclick = start;
+if (input) {
+    input.onkeydown = e => { if (e.key === "Enter") start(); };
+    // URL box ko hide / clean rakhne ke liye optional class toggle
+    input.style.display = "none"; 
+}
+
+const toggleBtn = document.getElementById("toggle");
+if (toggleBtn) toggleBtn.onclick = () => v.paused ? v.play() : v.pause();
+
+v.onplay = () => { if (toggleBtn) toggleBtn.textContent = "⏸"; };
+v.onpause = () => { if (toggleBtn) toggleBtn.textContent = "▶"; };
+
+const backBtn = document.getElementById("back");
+if (backBtn) backBtn.onclick = () => v.currentTime = Math.max(0, v.currentTime - 10);
+
+const nextBtn = document.getElementById("next");
+if (nextBtn) nextBtn.onclick = () => v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10);
+
+const muteBtn = document.getElementById("mute");
+if (muteBtn) muteBtn.onclick = () => {
     v.muted = !v.muted;
-    document.getElementById("mute").textContent = v.muted ? "🔇" : "🔊";
+    muteBtn.textContent = v.muted ? "🔇" : "🔊";
 };
-document.getElementById("speed").onchange = e => v.playbackRate = +e.target.value;
-document.getElementById("download").onclick = downloadMerged;
-document.getElementById("pip").onclick = async () => {
+
+const speedSel = document.getElementById("speed");
+if (speedSel) speedSel.onchange = e => v.playbackRate = +e.target.value;
+
+const dlBtn = document.getElementById("download");
+if (dlBtn) dlBtn.onclick = downloadMerged;
+
+const pipBtn = document.getElementById("pip");
+if (pipBtn) pipBtn.onclick = async () => {
     try {
         if (document.pictureInPictureElement) await document.exitPictureInPicture();
         else await v.requestPictureInPicture();
     } catch {}
 };
-document.getElementById("fs").onclick = async () => {
+
+const fsBtn = document.getElementById("fs");
+if (fsBtn) fsBtn.onclick = async () => {
     try {
-        if (!document.fullscreenElement) await document.getElementById("hlsScreen").requestFullscreen();
+        const screenEl = document.getElementById("hlsScreen");
+        if (!document.fullscreenElement && screenEl) await screenEl.requestFullscreen();
         else await document.exitFullscreen();
     } catch {}
 };
+
 v.ontimeupdate = () => {
     let d = v.duration;
-    if (Number.isFinite(d) && d > 0) document.getElementById("seek").value = v.currentTime / d * 1000;
-    document.getElementById("time").textContent = fmt(v.currentTime) + " / " + fmt(d);
+    const seekEl = document.getElementById("seek");
+    const timeEl = document.getElementById("time");
+    if (Number.isFinite(d) && d > 0 && seekEl) seekEl.value = v.currentTime / d * 1000;
+    if (timeEl) timeEl.textContent = fmt(v.currentTime) + " / " + fmt(d);
 };
-document.getElementById("seek").oninput = e => {
+
+const seekEl = document.getElementById("seek");
+if (seekEl) seekEl.oninput = e => {
     if (Number.isFinite(v.duration)) v.currentTime = e.target.value / 1000 * v.duration;
 };
+
 v.onwaiting = () => statusEl.textContent = "Buffering…";
 v.onplaying = () => statusEl.textContent = "Playing";
 v.onended = () => statusEl.textContent = "Ended";
