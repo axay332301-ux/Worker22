@@ -1,5 +1,5 @@
 // =========================================================
-// RWA ULTIMATE PREMIUM OTT PLAYER ENGINE (player.js)
+// RWA ULTIMATE ASMANI SKY OTT PLAYER ENGINE (player.js)
 // =========================================================
 const PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 const SEGMENT = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
@@ -10,6 +10,7 @@ const bufferLoader = document.getElementById("bufferLoader");
 
 let hls = null;
 let cachedToken = "";
+let resumeSeekTime = 0;
 
 function showLoader(show) {
     if (!bufferLoader) return;
@@ -25,8 +26,9 @@ function valid(u) {
     }
 }
 
-// Ensure original URL is unwrapped if already proxied so token can be extracted cleanly
+// Unwrap URL if already proxied so edge-cache-token can be extracted cleanly
 function unwrapOriginalUrl(u) {
+    if (!u) return "";
     try {
         const parsed = new URL(u);
         if (parsed.hostname.includes("workers.dev") && parsed.searchParams.has("url")) {
@@ -56,25 +58,25 @@ class BackendLoader extends Hls.DefaultConfig.loader {
         let originalUrl = ctx.url;
         let mainUrl = input ? unwrapOriginalUrl(input.value.trim()) : "";
 
-        // 1. Main input URL (decoded) se token extract karke cache karna
+        // 1. Extract and cache edge-cache-token from main URL
         let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
         if (match) {
             cachedToken = match[1];
         }
 
-        // 2. Agar segment URL pehle se worker proxy se wrap hoke aaya hai toh usko direct jane do
+        // 2. If URL is already proxied by our worker, pass it directly
         if (originalUrl.includes("allswbatch22.workers.dev")) {
             ctx.url = originalUrl;
             super.load(ctx, cfg, cb);
             return;
         }
 
-        // 3. Har segment ya child m3u8 URL ke sath automatic token jodna
+        // 3. Inject cached token into child playlists and segments
         if (cachedToken && !originalUrl.includes("edge-cache-token=")) {
             originalUrl += (originalUrl.includes("?") ? "&" : "?") + cachedToken;
         }
 
-        // 4. Child playlist (.m3u8) ko PROXY par aur video segments (.ts) ko SEGMENT par bhejna
+        // 4. Route child .m3u8 to /stream and .ts segments to /proxy
         if (originalUrl.includes(".m3u8")) {
             ctx.url = PROXY + encodeURIComponent(originalUrl);
         } else if (segment(originalUrl)) {
@@ -102,11 +104,14 @@ function stopPlayer() {
     showLoader(false);
 }
 
-// Close button function
+// Close Player & return to Explorer Slide
 window.closePlayerBox = function() {
     stopPlayer();
     const menu = document.getElementById("settingsMenu");
     if (menu) menu.classList.remove("show");
+    if (typeof closeInlinePdfAndReset === "function") {
+        closeInlinePdfAndReset();
+    }
     if (typeof showSlide === "function") {
         showSlide("slideExplorer");
     }
@@ -144,9 +149,23 @@ function start() {
         return;
     }
 
-    // Cache token immediately from clean raw URL
     let tokMatch = cleanRaw.match(/(edge-cache-token=[^&]+)/);
     if (tokMatch) cachedToken = tokMatch[1];
+
+    // Direct MP4 fallback check
+    if (cleanRaw.includes(".mp4") && !cleanRaw.includes(".m3u8")) {
+        v.src = cleanRaw;
+        populateQualitySettings([]);
+        v.onloadedmetadata = () => {
+            showLoader(false);
+            if (resumeSeekTime > 0) {
+                v.currentTime = resumeSeekTime;
+                resumeSeekTime = 0;
+            }
+            v.play().catch(() => {});
+        };
+        return;
+    }
 
     let src = manifest(cleanRaw);
 
@@ -164,6 +183,10 @@ function start() {
         hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
             showLoader(false);
             populateQualitySettings(data.levels || []);
+            if (resumeSeekTime > 0) {
+                v.currentTime = resumeSeekTime;
+                resumeSeekTime = 0;
+            }
             v.play().catch(() => {});
         });
 
@@ -181,36 +204,52 @@ function start() {
         v.src = src;
         v.onloadedmetadata = () => {
             showLoader(false);
+            if (resumeSeekTime > 0) {
+                v.currentTime = resumeSeekTime;
+                resumeSeekTime = 0;
+            }
             v.play().catch(() => {});
         };
     }
 }
 
-// Populate both API qualities (240p/360p/480p/720p) & HLS internal levels
+// =========================================================
+// COMPACT QUALITY SELECTOR (Only Unique Clean Resolutions)
+// =========================================================
 function populateQualitySettings(hlsLevels) {
     const qList = document.getElementById("qualityList");
     if (!qList) return;
 
-    let html = "";
     const activeInfo = (typeof state !== "undefined" && state.activeKey && state.mediaMap) ? state.mediaMap[state.activeKey] : null;
-    const serverQuals = activeInfo && activeInfo.qualities ? Object.keys(activeInfo.qualities) : [];
+    const serverQualsObj = (activeInfo && activeInfo.qualities) ? activeInfo.qualities : {};
+    const serverKeys = Object.keys(serverQualsObj);
 
-    if (hlsLevels && hlsLevels.length > 1) {
-        html += `<div class="q-option active" onclick="changeHlsLevel(-1, this)">Auto</div>`;
-        hlsLevels.forEach((lvl, idx) => {
-            let label = lvl.height ? `${lvl.height}p` : `Level ${idx + 1}`;
-            html += `<div class="q-option" onclick="changeHlsLevel(${idx}, this)">${label}</div>`;
-        });
-    } else if (serverQuals.length > 0) {
-        serverQuals.forEach((qKey, idx) => {
-            const isAct = (unwrapOriginalUrl(input.value) === unwrapOriginalUrl(activeInfo.qualities[qKey])) || idx === 0;
+    let html = "";
+
+    // Case 1: Server provides clean distinct resolution links (720p, 480p, 360p, 240p)
+    if (serverKeys.length > 0) {
+        const currentRaw = unwrapOriginalUrl(input.value);
+        serverKeys.forEach((qKey, idx) => {
+            const targetRaw = unwrapOriginalUrl(serverQualsObj[qKey]);
+            const isAct = (currentRaw && targetRaw && currentRaw === targetRaw) || (!currentRaw && idx === 0);
             html += `<div class="q-option ${isAct ? 'active' : ''}" onclick="switchServerQuality('${qKey.replace(/'/g, "")}', this)">${qKey}</div>`;
         });
-    } else {
-        html = `<div class="q-option active" onclick="changeHlsLevel(-1, this)">720p HD</div>
-                <div class="q-option" onclick="changeHlsLevel(0, this)">480p</div>
-                <div class="q-option" onclick="changeHlsLevel(0, this)">360p</div>
-                <div class="q-option" onclick="changeHlsLevel(0, this)">240p</div>`;
+    } 
+    // Case 2: Multi-variant HLS playlist levels
+    else if (hlsLevels && hlsLevels.length > 1) {
+        html += `<div class="q-option active" onclick="changeHlsLevel(-1, this)">Auto</div>`;
+        const seenHeights = new Set();
+        hlsLevels.forEach((lvl, idx) => {
+            let label = lvl.height ? `${lvl.height}p` : `${idx + 1}p`;
+            if (!seenHeights.has(label)) {
+                seenHeights.add(label);
+                html += `<div class="q-option" onclick="changeHlsLevel(${idx}, this)">${label}</div>`;
+            }
+        });
+    } 
+    // Case 3: Single stream default
+    else {
+        html = `<div class="q-option active" onclick="toggleSettingsMenu()">720p HD</div>`;
     }
 
     qList.innerHTML = html;
@@ -224,12 +263,12 @@ window.changeHlsLevel = function(idx, el) {
 };
 
 window.switchServerQuality = function(qKey, el) {
-    const currentTime = v ? v.currentTime : 0;
+    resumeSeekTime = v ? v.currentTime : 0;
     document.querySelectorAll("#qualityList .q-option").forEach(o => o.classList.remove("active"));
     if (el) el.classList.add("active");
     toggleSettingsMenu();
     if (typeof changeLectureQuality === "function") {
-        changeLectureQuality(qKey, currentTime);
+        changeLectureQuality(qKey, resumeSeekTime);
     }
 };
 
@@ -245,6 +284,19 @@ window.toggleSettingsMenu = function() {
     if (menu) menu.classList.toggle("show");
 };
 
+// Close settings menu when clicking on video
+if (v) {
+    v.addEventListener("click", () => {
+        const menu = document.getElementById("settingsMenu");
+        if (menu && menu.classList.contains("show")) {
+            menu.classList.remove("show");
+        }
+    });
+}
+
+// =========================================================
+// VIDEO SEGMENT MERGER & MP4 DOWNLOADER
+// =========================================================
 async function downloadMerged() {
     const raw = input ? unwrapOriginalUrl(input.value.trim()) : "";
     if (!valid(raw) || !hls || !hls.levels || hls.levels.length === 0) return;
@@ -254,7 +306,7 @@ async function downloadMerged() {
     const bar = document.getElementById("bar");
     if (box) box.classList.add("show");
     if (bar) bar.style.width = "2%";
-    if (text) text.textContent = "Preparing segments...";
+    if (text) text.textContent = "Preparing video segments...";
 
     try {
         let levelIndex = hls.currentLevel >= 0 ? hls.currentLevel : 0;
@@ -263,6 +315,16 @@ async function downloadMerged() {
         let total = fragments.length;
         let match = raw.match(/(edge-cache-token=[^&]+)/);
         let tokenStr = match ? match[1] : cachedToken;
+
+        if (fragments[0] && fragments[0].initSegment) {
+            let initUrl = fragments[0].initSegment.url;
+            if (!initUrl.includes("allswbatch22.workers.dev")) {
+                if (tokenStr && !initUrl.includes("edge-cache-token=")) initUrl += (initUrl.includes("?") ? "&" : "?") + tokenStr;
+                initUrl = SEGMENT + encodeURIComponent(initUrl);
+            }
+            let res = await fetch(initUrl);
+            if (res.ok) downloadedBuffers.push(await res.arrayBuffer());
+        }
 
         for (let i = 0; i < total; i++) {
             if (text) text.textContent = `Downloading: ${i + 1} / ${total} (${Math.round(((i + 1) / total) * 100)}%)`;
@@ -277,7 +339,7 @@ async function downloadMerged() {
             if (bar) bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
         }
 
-        if (text) text.textContent = "Merging video file...";
+        if (text) text.textContent = "Merging MP4 file...";
         const blob = new Blob(downloadedBuffers, { type: "video/mp4" });
         const finalUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
