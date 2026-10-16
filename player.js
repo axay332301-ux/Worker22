@@ -378,7 +378,7 @@ if (pipBtn) pipBtn.onclick = async () => {
     } catch {}
 };
 
-// FULLSCREEN TOGGLE & MINIMIZE BUTTON LOGIC
+// FULLSCREEN & MINIMIZE BUTTON LOGIC
 const fsBtn = document.getElementById("fs");
 const screenEl = document.getElementById("hlsScreen");
 const headerBar = document.getElementById("playerHeaderBar");
@@ -398,10 +398,10 @@ if (fsBtn && screenEl) {
 document.addEventListener("fullscreenchange", () => {
     if (document.fullscreenElement) {
         if (headerBar) headerBar.classList.add("hidden");
-        if (fsBtn) fsBtn.textContent = "🗗"; // Minimize icon when fullscreen
+        if (fsBtn) fsBtn.textContent = "🗗 Minimize";
     } else {
         if (headerBar) headerBar.classList.remove("hidden");
-        if (fsBtn) fsBtn.textContent = "⛶"; // Fullscreen icon when normal
+        if (fsBtn) fsBtn.textContent = "⛶ Full";
     }
 });
 
