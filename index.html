@@ -21,10 +21,10 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Top Sky Glass Navbar (Visible on Home Hub, Auto-Hides on Inner Slides) -->
+    <!-- Top Sky Glass Navbar with Profile, Login & Logout Integration -->
     <nav id="topHeaderNav" class="sky-nav sticky top-0 z-40 px-4 py-3 shadow-md">
         <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="goHomeHub()">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="goHomeHub(event)">
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">R</div>
                 <div>
                     <div class="font-extrabold text-lg leading-none text-slate-900 tracking-tight">RWA SKY PORTAL</div>
@@ -33,17 +33,14 @@
             </div>
 
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="openTestSeriesExplorer('paid_ts')" class="btn-nav bg-indigo-600 text-white border-0">🏆 Paid Tests</button>
-                <button onclick="openTestSeriesExplorer('free_ts')" class="btn-nav bg-teal-600 text-white border-0">📝 Free Tests</button>
-                <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0">🔑 Tokens (<span id="tokCountBadge">1</span>)</button>
-
-                <!-- Dynamic User Profile / Login / Logout Area in Navbar -->
-                <button id="navProfileBtn" onclick="openProfileSlide()" class="btn-nav bg-sky-700 text-white border-0 flex items-center gap-1.5">
-                    <span id="navUserAvatar" class="w-5 h-5 rounded-full bg-white text-sky-800 font-black text-[11px] inline-flex items-center justify-center">S</span>
-                    <span id="navUserName">Profile</span>
+                <button onclick="openTestSeriesExplorer('paid_ts'); event.stopPropagation();" class="btn-nav bg-indigo-600 text-white border-0">🏆 Paid Tests</button>
+                <button onclick="openTestSeriesExplorer('free_ts'); event.stopPropagation();" class="btn-nav bg-teal-600 text-white border-0">📝 Free Tests</button>
+                <button onclick="openTokenSlide(); event.stopPropagation();" class="btn-nav bg-amber-500 text-white border-0">🔑 Tokens (<span id="tokCountBadge">1</span>)</button>
+                <!-- User Profile & Logout / Login Buttons -->
+                <button onclick="openUserProfileModal(); event.stopPropagation();" class="btn-nav bg-blue-700 text-white border-0 flex items-center gap-1.5" title="User Profile">
+                    <span>👤</span> <span id="navUserName">Profile</span>
                 </button>
-                <button id="navLoginBtn" onclick="openLoginSlide()" class="btn-nav bg-emerald-600 text-white border-0 hidden">🔐 Login</button>
-                <button id="navLogoutBtn" onclick="logoutCurrentUser()" class="btn-nav bg-rose-600 text-white border-0" title="Logout Account">🚪 Logout</button>
+                <button onclick="handleUserLogout(); event.stopPropagation();" class="btn-nav bg-rose-600 text-white border-0" title="Logout">🚪 Logout</button>
             </div>
         </div>
     </nav>
@@ -55,31 +52,15 @@
              SLIDE 1: HOME HUB (ATTRACTIVE CARDS FOR ALL SECTIONS)
              ========================================================= -->
         <section id="slideHome" class="slide-page active-slide">
-            <!-- Quick Welcome User Strip -->
-            <div id="homeWelcomeBanner" class="sky-banner mb-6 flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div id="homeAvatarCircle" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 text-white font-black text-xl flex items-center justify-center shadow-md">S</div>
-                    <div>
-                        <div class="text-[11px] font-extrabold text-sky-700 uppercase tracking-wider">Welcome Back, Student</div>
-                        <h2 id="homeWelcomeName" class="text-lg sm:text-xl font-black text-slate-900">sandeep (ID: 4756316)</h2>
-                        <p id="homeWelcomeSub" class="text-xs text-slate-600 font-semibold">sandeepkaswan254@gmail.com • Rajasthan (churu)</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="openProfileSlide()" class="btn-nav bg-blue-600 text-white border-0 text-xs">👤 View Full Profile</button>
-                    <button onclick="openLoginSlide()" class="btn-nav bg-emerald-600 text-white border-0 text-xs">🔄 Switch / Login</button>
-                </div>
-            </div>
-
             <div class="text-center max-w-2xl mx-auto mb-8 mt-2">
                 <span class="px-3.5 py-1 rounded-full bg-white/80 text-sky-900 font-extrabold text-xs uppercase tracking-wider shadow-sm">RWA All-In-One Cloud Portal</span>
                 <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Select Your Study Zone</h1>
-                <p class="text-slate-700 text-sm font-medium mt-1">Paid Batches, Free Classes, Official Paid/Free Test Series, User Profile aur Multi-Token Sync.</p>
+                <p class="text-slate-700 text-sm font-medium mt-1">Paid Batches, Free Classes, Official Paid/Free Test Series aur Multi-Token Sync.</p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                 <!-- Card 1: Paid Batches -->
-                <div onclick="openExplorerSlide('paid')" class="hub-card hub-paid cursor-pointer">
+                <div onclick="openExplorerSlide('paid'); event.stopPropagation();" class="hub-card hub-paid cursor-pointer">
                     <div class="hub-icon">🎓</div>
                     <span class="hub-badge">ALL TOKENS MERGED</span>
                     <h2 class="text-2xl font-black mt-2">Paid Batches</h2>
@@ -88,7 +69,7 @@
                 </div>
 
                 <!-- Card 2: Free Batches -->
-                <div onclick="openExplorerSlide('free')" class="hub-card hub-free cursor-pointer">
+                <div onclick="openExplorerSlide('free'); event.stopPropagation();" class="hub-card hub-free cursor-pointer">
                     <div class="hub-icon">🆓</div>
                     <span class="hub-badge">FREE COURSES</span>
                     <h2 class="text-2xl font-black mt-2">Free Batches</h2>
@@ -97,7 +78,7 @@
                 </div>
 
                 <!-- Card 3: Paid Test Series -->
-                <div onclick="openTestSeriesExplorer('paid_ts')" class="hub-card hub-paid-ts cursor-pointer">
+                <div onclick="openTestSeriesExplorer('paid_ts'); event.stopPropagation();" class="hub-card hub-paid-ts cursor-pointer">
                     <div class="hub-icon">🏆</div>
                     <span class="hub-badge">OFFICIAL EXAM SERIES</span>
                     <h2 class="text-2xl font-black mt-2">Paid Test Series</h2>
@@ -106,7 +87,7 @@
                 </div>
 
                 <!-- Card 4: Free Weekly Test Series -->
-                <div onclick="openTestSeriesExplorer('free_ts')" class="hub-card hub-free-ts cursor-pointer">
+                <div onclick="openTestSeriesExplorer('free_ts'); event.stopPropagation();" class="hub-card hub-free-ts cursor-pointer">
                     <div class="hub-icon">📝</div>
                     <span class="hub-badge">WEEKLY MOCK TESTS</span>
                     <h2 class="text-2xl font-black mt-2">Free Test Series</h2>
@@ -115,21 +96,12 @@
                 </div>
 
                 <!-- Card 5: Multi-Token Manager -->
-                <div onclick="openTokenSlide()" class="hub-card hub-token cursor-pointer">
+                <div onclick="openTokenSlide(); event.stopPropagation();" class="hub-card hub-token cursor-pointer sm:col-span-2 lg:col-span-1">
                     <div class="hub-icon">🔑</div>
                     <span class="hub-badge">MULTI-ACCOUNT SYNC</span>
                     <h2 class="text-2xl font-black mt-2">Tokens Manager</h2>
                     <p class="text-sm opacity-95 mt-1">Multiple RWA tokens add karein taaki sabhi accounts ke batches ek sath dikhein.</p>
                     <div class="hub-btn mt-5">Manage Tokens ➔</div>
-                </div>
-
-                <!-- Card 6: My User Profile & Settings (Added from Old Website Logs) -->
-                <div onclick="openProfileSlide()" class="hub-card hub-profile cursor-pointer">
-                    <div class="hub-icon">👤</div>
-                    <span class="hub-badge">USER PROFILE & SETTINGS</span>
-                    <h2 class="text-2xl font-black mt-2">My Profile</h2>
-                    <p class="text-sm opacity-95 mt-1">Apni RWA Account Details, User ID, Phone, State, District, Refer Code aur Session dekhein.</p>
-                    <div class="hub-btn mt-5">Open Profile ➔</div>
                 </div>
             </div>
         </section>
@@ -142,8 +114,8 @@
             <div class="sky-banner flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0 text-xs">🏠 Home</button>
-                        <button onclick="handleGlobalBack()" class="btn-nav bg-sky-600 text-white border-0 text-xs">⬅ Back</button>
+                        <button onclick="goHomeHub(event); event.stopPropagation();" class="btn-nav bg-slate-900 text-white border-0 text-xs">🏠 Home</button>
+                        <button onclick="handleGlobalBack(); event.stopPropagation();" class="btn-nav bg-sky-600 text-white border-0 text-xs">⬅ Back</button>
                         <span id="crumbText" class="px-3 py-1 rounded-full bg-sky-200 text-sky-950 font-extrabold text-[11px] uppercase">Explorer</span>
                     </div>
                     <h2 id="headingText" class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">All Batches</h2>
@@ -156,10 +128,10 @@
 
             <!-- Course Internal Sub-Tabs (Subjects, Live, Batch Tests, Telegram) -->
             <div id="subTabs" class="hidden flex gap-2.5 mb-6 pb-2 overflow-x-auto">
-                <button onclick="loadCourseTab('subjects')" id="sub_subjects" class="tab-pill active-pill">📚 Subjects</button>
-                <button onclick="loadCourseTab('live')" id="sub_live" class="tab-pill">🔴 Live & Upcoming</button>
-                <button onclick="loadCourseTab('tests')" id="sub_tests" class="tab-pill">📝 Batch Tests</button>
-                <button onclick="loadCourseTab('telegram')" id="sub_telegram" class="tab-pill">✈️ Doubt Group</button>
+                <button onclick="loadCourseTab('subjects'); event.stopPropagation();" id="sub_subjects" class="tab-pill active-pill">📚 Subjects</button>
+                <button onclick="loadCourseTab('live'); event.stopPropagation();" id="sub_live" class="tab-pill">🔴 Live & Upcoming</button>
+                <button onclick="loadCourseTab('tests'); event.stopPropagation();" id="sub_tests" class="tab-pill">📝 Batch Tests</button>
+                <button onclick="loadCourseTab('telegram'); event.stopPropagation();" id="sub_telegram" class="tab-pill">✈️ Doubt Group</button>
             </div>
 
             <!-- Dynamic Content Grid -->
@@ -179,7 +151,7 @@
                         <h3 id="playingTitle" class="font-black text-base sm:text-lg text-slate-900 truncate">▶ Class Video</h3>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="closePlayerBox()" id="closePlayerBtn" class="btn-close-player">✖ Close Player</button>
+                        <button onclick="closePlayerBox(); event.stopPropagation();" id="closePlayerBtn" class="btn-close-player">✖ Close Player</button>
                     </div>
                 </div>
 
@@ -189,11 +161,6 @@
                 <!-- Video Screen & Controls -->
                 <div class="w-full">
                     <div id="hlsScreen" class="screen relative">
-                        <!-- FULLSCREEN ONLY BACK BUTTON (Hidden in normal view, shown ONLY when fullscreen is active) -->
-                        <button id="fsBackBtn" onclick="exitVideoFullscreen(event)" class="fs-only-back-btn" title="Exit Fullscreen">
-                            ⬅ Back
-                        </button>
-
                         <!-- Smooth Spinner Overlay while Buffering -->
                         <div id="bufferLoader" class="buffer-overlay hidden">
                             <div class="spinner-ring"></div>
@@ -205,7 +172,7 @@
                         <div id="settingsMenu" class="ott-settings-popup">
                             <div class="sett-header">
                                 <span>⚙️ Quality & Speed</span>
-                                <button onclick="toggleSettingsMenu()" class="sett-close">✕</button>
+                                <button onclick="toggleSettingsMenu(); event.stopPropagation();" class="sett-close">✕</button>
                             </div>
                             <div class="sett-section">
                                 <div class="sett-title">🎬 Video Quality</div>
@@ -216,50 +183,49 @@
                             <div class="sett-section mt-2.5">
                                 <div class="sett-title">⚡ Speed</div>
                                 <div class="sett-options">
-                                    <div class="spd-option" onclick="changeSpd(0.5, this)">0.5x</div>
-                                    <div class="spd-option" onclick="changeSpd(0.75, this)">0.75x</div>
-                                    <div class="spd-option active" onclick="changeSpd(1, this)">1.0x</div>
-                                    <div class="spd-option" onclick="changeSpd(1.25, this)">1.25x</div>
-                                    <div class="spd-option" onclick="changeSpd(1.5, this)">1.5x</div>
-                                    <div class="spd-option" onclick="changeSpd(2, this)">2.0x</div>
+                                    <div class="spd-option" onclick="changeSpd(0.5, this); event.stopPropagation();">0.5x</div>
+                                    <div class="spd-option" onclick="changeSpd(0.75, this); event.stopPropagation();">0.75x</div>
+                                    <div class="spd-option active" onclick="changeSpd(1, this); event.stopPropagation();">1.0x</div>
+                                    <div class="spd-option" onclick="changeSpd(1.25, this); event.stopPropagation();">1.25x</div>
+                                    <div class="spd-option" onclick="changeSpd(1.5, this); event.stopPropagation();">1.5x</div>
+                                    <div class="spd-option" onclick="changeSpd(2, this); event.stopPropagation();">2.0x</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Asmani Sky Controls Bar (Automatically hidden in Fullscreen mode) -->
-                        <div id="playerControlsBar" class="controls">
+                        <!-- Asmani Sky Controls Bar -->
+                        <div class="controls" id="playerControlsBar">
                             <!-- Seekbar & Timing on the exact same line -->
-                            <div class="seek-row">
+                            <div class="seek-row" id="playerSeekRow">
                                 <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
                                 <span id="time" class="time-inline">00:00 / 00:00</span>
                             </div>
 
                             <!-- Attractive Control Buttons Row -->
-                            <div class="buttons-row">
+                            <div class="buttons-row" id="playerButtonsRow">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <button id="back" class="ctrl-btn" title="10s Back">⏪ 10s</button>
-                                    <button id="toggle" class="ctrl-btn play-main-btn" title="Play/Pause">⏸</button>
-                                    <button id="next" class="ctrl-btn" title="10s Forward">10s ⏩</button>
-                                    <button id="mute" class="ctrl-btn" title="Mute/Unmute">🔊</button>
+                                    <button id="back" class="ctrl-btn" title="10s Back" onclick="event.stopPropagation();">⏪ 10s</button>
+                                    <button id="toggle" class="ctrl-btn play-main-btn" title="Play/Pause" onclick="event.stopPropagation();">⏸</button>
+                                    <button id="next" class="ctrl-btn" title="10s Forward" onclick="event.stopPropagation();">10s ⏩</button>
+                                    <button id="mute" class="ctrl-btn" title="Mute/Unmute" onclick="event.stopPropagation();">🔊</button>
                                 </div>
 
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <!-- PDF 1 & PDF 2 Buttons (Opens PDF right below player in place of Next Classes) -->
-                                    <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
-                                    <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
+                                    <button id="playerPdf1" onclick="openActivePlayerPdf(1); event.stopPropagation();" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
+                                    <button id="playerPdf2" onclick="openActivePlayerPdf(2); event.stopPropagation();" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
 
-                                    <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
-                                    <button id="download" class="ctrl-btn dl-btn" title="Download Video">⬇ Save</button>
-                                    <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
-                                    <button id="fs" class="ctrl-btn" title="Fullscreen">⛶</button>
+                                    <button id="pip" class="ctrl-btn" title="Picture in Picture" onclick="event.stopPropagation();">🖼️ PiP</button>
+                                    <button id="download" class="ctrl-btn dl-btn" title="Download Video" onclick="event.stopPropagation();">⬇ Save</button>
+                                    <button onclick="toggleSettingsMenu(); event.stopPropagation();" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
+                                    <button id="fs" class="ctrl-btn" title="Fullscreen" onclick="event.stopPropagation();">⛶</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- YouTube Embed Screen (For Free Classes) -->
-                    <div id="ytScreen" class="screen hidden aspect-video relative">
-                        <button onclick="exitVideoFullscreen(event)" class="fs-only-back-btn">⬅ Back</button>
+                    <div id="ytScreen" class="screen hidden aspect-video">
                         <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                     </div>
 
@@ -292,14 +258,14 @@
                 <div id="inlinePdfBox" class="sky-card p-4 hidden">
                     <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b border-sky-200">
                         <div class="flex items-center gap-2 min-w-0">
-                            <button onclick="switchBottomToNextClasses()" class="btn-nav bg-slate-900 text-white border-0 text-xs shrink-0">⏭️ Back to Next Classes</button>
+                            <button onclick="switchBottomToNextClasses(); event.stopPropagation();" class="btn-nav bg-slate-900 text-white border-0 text-xs shrink-0">⏭️ Back to Next Classes</button>
                             <h4 id="inlinePdfTitle" class="font-extrabold text-slate-900 text-sm truncate">📄 Class Notes PDF</h4>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <button onclick="setInlinePdfMode('appx')" class="btn-nav bg-blue-600 text-white border-0 text-xs">AppX Viewer</button>
-                            <button onclick="setInlinePdfMode('gdocs')" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Google Viewer</button>
+                            <button onclick="setInlinePdfMode('appx'); event.stopPropagation();" class="btn-nav bg-blue-600 text-white border-0 text-xs">AppX Viewer</button>
+                            <button onclick="setInlinePdfMode('gdocs'); event.stopPropagation();" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Google Viewer</button>
                             <a id="inlineRawPdfLink" href="#" target="_blank" class="btn-nav bg-amber-500 text-white border-0 text-xs no-underline">📥 Download</a>
-                            <button onclick="switchBottomToNextClasses()" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close PDF</button>
+                            <button onclick="switchBottomToNextClasses(); event.stopPropagation();" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close PDF</button>
                         </div>
                     </div>
                     <iframe id="inlinePdfFrame" class="w-full h-[75vh] bg-slate-900 rounded-2xl border-2 border-sky-300" src="" frameborder="0"></iframe>
@@ -321,12 +287,12 @@
                     </div>
                     <div class="flex items-center gap-2.5 flex-wrap">
                         <div id="cbtTimerBadge" class="px-4 py-2 rounded-2xl bg-slate-900 text-amber-300 font-black text-sm tracking-wider shadow-md">⏱️ 60:00</div>
-                        <button id="cbtSubmitBtn" onclick="submitCbtTest()" class="btn-nav bg-emerald-600 text-white border-0 text-xs px-4 py-2.5">✅ Submit Test</button>
-                        <button onclick="exitCbtTest()" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Exit</button>
+                        <button id="cbtSubmitBtn" onclick="submitCbtTest(); event.stopPropagation();" class="btn-nav bg-emerald-600 text-white border-0 text-xs px-4 py-2.5">✅ Submit Test</button>
+                        <button onclick="exitCbtTest(); event.stopPropagation();" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Exit</button>
                     </div>
                 </div>
 
-                <!-- Result Summary Card (Hidden during attempt, shown after Submit) -->
+                <!-- Result Summary Card -->
                 <div id="cbtResultCard" class="hidden sky-card p-5 mb-5 border-2 border-emerald-400">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <div>
@@ -337,17 +303,15 @@
                             <span id="cbtStatCorrect" class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-900">✅ Correct: 0</span>
                             <span id="cbtStatWrong" class="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900">❌ Wrong: 0</span>
                             <span id="cbtStatSkip" class="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-800">⚪ Skipped: 0</span>
-                            <button onclick="reAttemptCbtTest()" class="btn-nav bg-blue-600 text-white border-0">🔄 Re-Attempt</button>
+                            <button onclick="reAttemptCbtTest(); event.stopPropagation();" class="btn-nav bg-blue-600 text-white border-0">🔄 Re-Attempt</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Main CBT Layout: Left Question Card + Right Palette -->
+                <!-- Main CBT Layout -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <!-- Question & Options Area (2 Cols) -->
                     <div class="lg:col-span-2 sky-card p-5 flex flex-col justify-between min-h-[420px]">
                         <div>
-                            <!-- Question Header -->
                             <div class="flex justify-between items-center pb-3 mb-4 border-b border-sky-200">
                                 <span id="cbtQNumber" class="font-black text-base text-blue-700">Question 1 of 50</span>
                                 <div class="flex items-center gap-2 text-xs font-bold">
@@ -355,31 +319,22 @@
                                     <span id="cbtNegMarks" class="px-2.5 py-0.5 rounded-lg bg-rose-100 text-rose-800">-0.50</span>
                                 </div>
                             </div>
-
-                            <!-- Question HTML Content (Supports Kokila Hindi Font & Images) -->
                             <div id="cbtQuestionHtml" class="cbt-rich-text text-slate-900 mb-5"></div>
-
-                            <!-- Options List -->
                             <div id="cbtOptionsList" class="space-y-3"></div>
-
-                            <!-- Detailed Solution Box (Shown in Solution / Review Mode after Submit) -->
                             <div id="cbtSolutionBox" class="hidden mt-6 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300">
                                 <div class="font-black text-xs text-emerald-900 uppercase mb-2">💡 Official Full Solution:</div>
                                 <div id="cbtSolutionHtml" class="cbt-rich-text text-slate-900"></div>
                             </div>
                         </div>
-
-                        <!-- Bottom Navigation Buttons for Question -->
                         <div class="flex flex-wrap justify-between items-center gap-2 pt-5 mt-6 border-t border-sky-200">
                             <div class="flex gap-2">
-                                <button onclick="prevCbtQuestion()" class="btn-nav bg-slate-800 text-white border-0">⬅ Previous</button>
-                                <button onclick="clearCbtResponse()" id="cbtClearBtn" class="btn-nav bg-amber-500 text-white border-0">🧹 Clear</button>
+                                <button onclick="prevCbtQuestion(); event.stopPropagation();" class="btn-nav bg-slate-800 text-white border-0">⬅ Previous</button>
+                                <button onclick="clearCbtResponse(); event.stopPropagation();" id="cbtClearBtn" class="btn-nav bg-amber-500 text-white border-0">🧹 Clear</button>
                             </div>
-                            <button onclick="nextCbtQuestion()" class="btn-nav bg-blue-600 text-white border-0 px-5">Save & Next ➔</button>
+                            <button onclick="nextCbtQuestion(); event.stopPropagation();" class="btn-nav bg-blue-600 text-white border-0 px-5">Save & Next ➔</button>
                         </div>
                     </div>
 
-                    <!-- Question Palette Area (1 Col) -->
                     <div class="sky-card p-5 flex flex-col max-h-[75vh]">
                         <h4 class="font-black text-sm text-slate-900 pb-2 mb-3 border-b border-sky-200">🔢 Question Palette</h4>
                         <div class="flex gap-3 text-[11px] font-bold text-slate-700 mb-3 flex-wrap">
@@ -394,216 +349,91 @@
         </section>
 
         <!-- =========================================================
-             SLIDE 5: MULTI-TOKEN MANAGER SLIDE
+             SLIDE 5: MULTI-TOKEN & USER PROFILE SLIDE
              ========================================================= -->
         <section id="slideTokens" class="slide-page hidden-slide">
-            <div class="max-w-3xl mx-auto sky-card p-6">
-                <div class="flex justify-between items-center pb-4 mb-4 border-b border-sky-200">
+            <div class="max-w-3xl mx-auto space-y-6">
+                <!-- User Profile Card -->
+                <div id="userProfileCard" class="sky-card p-6">
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-sky-200">
+                        <div>
+                            <span class="text-xs font-extrabold text-blue-600 uppercase">User Account Profile</span>
+                            <h2 class="text-2xl font-black text-slate-900">👤 My Profile Details</h2>
+                        </div>
+                        <button onclick="goHomeHub(event); event.stopPropagation();" class="btn-nav bg-slate-900 text-white border-0">🏠 Home</button>
+                    </div>
+                    <div id="userProfileDetails" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm font-medium text-slate-800">
+                        <div class="p-3 bg-white rounded-xl border border-sky-200"><b>Name:</b> <span id="profileName">-</span></div>
+                        <div class="p-3 bg-white rounded-xl border border-sky-200"><b>Email:</b> <span id="profileEmail">-</span></div>
+                        <div class="p-3 bg-white rounded-xl border border-sky-200"><b>Phone:</b> <span id="profilePhone">-</span></div>
+                        <div class="p-3 bg-white rounded-xl border border-sky-200"><b>User ID:</b> <span id="profileUserId">-</span></div>
+                        <div class="p-3 bg-white rounded-xl border border-sky-200"><b>State / District:</b> <span id="profileStateDistrict">-</span></div>
+                        <div class="p-3 bg-white rounded-xl border border-sky-200"><b>Category / Gender:</b> <span id="profileInfo">-</span></div>
+                    </div>
+                    <div class="mt-4 flex gap-3">
+                        <button onclick="handleUserLogout(); event.stopPropagation();" class="btn-nav bg-rose-600 text-white border-0">🚪 Logout Account</button>
+                    </div>
+                </div>
+
+                <!-- Multi-Token Manager Card -->
+                <div class="sky-card p-6">
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-sky-200">
+                        <div>
+                            <span class="text-xs font-extrabold text-amber-600 uppercase">Multi-Account Sync</span>
+                            <h2 class="text-2xl font-black text-slate-900">🔑 Manage Auth Tokens</h2>
+                            <p class="text-xs text-slate-600 mt-0.5">Jitne bhi tokens add karenge, Paid Batches mein un sabhi ke courses ek sath merge hoke dikhenge.</p>
+                        </div>
+                    </div>
+
+                    <!-- Add New Token Form -->
+                    <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-6">
+                        <h4 class="font-extrabold text-sm text-slate-800 mb-3">➕ Add New Account Token</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="text-xs font-bold text-slate-700">Account Label / Name</label>
+                                <input id="newTokLabel" type="text" placeholder="e.g. Account 1 (SSC GD)" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-700">User-ID (Optional)</label>
+                                <input id="newTokUid" type="text" placeholder="e.g. 4756316" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 outline-none">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-xs font-bold text-slate-700">JWT Authorization Token</label>
+                            <textarea id="newTokValue" rows="3" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 font-mono outline-none"></textarea>
+                        </div>
+                        <button onclick="addNewToken(); event.stopPropagation();" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs border-0 shadow-md">💾 Save & Add Token</button>
+                    </div>
+
+                    <!-- Saved Tokens List -->
                     <div>
-                        <span class="text-xs font-extrabold text-amber-600 uppercase">Multi-Account Sync</span>
-                        <h2 class="text-2xl font-black text-slate-900">🔑 Manage Auth Tokens</h2>
-                        <p class="text-xs text-slate-600 mt-0.5">Jitne bhi tokens add karenge, Paid Batches mein un sabhi ke courses ek sath merge hoke dikhenge.</p>
+                        <h4 class="font-extrabold text-sm text-slate-800 mb-3">📋 Active Saved Tokens</h4>
+                        <div id="tokenListContainer" class="space-y-3"></div>
                     </div>
-                    <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0">🏠 Home</button>
-                </div>
-
-                <!-- Add New Token Form -->
-                <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-6">
-                    <h4 class="font-extrabold text-sm text-slate-800 mb-3">➕ Add New Account Token</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="text-xs font-bold text-slate-700">Account Label / Name</label>
-                            <input id="newTokLabel" type="text" placeholder="e.g. Account 1 (SSC GD)" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 outline-none">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-700">User-ID (Optional)</label>
-                            <input id="newTokUid" type="text" placeholder="e.g. 4756316" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 outline-none">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="text-xs font-bold text-slate-700">JWT Authorization Token</label>
-                        <textarea id="newTokValue" rows="3" placeholder="eyJ0eXAiOiJKV1QiLCJhbGci..." class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 font-mono outline-none"></textarea>
-                    </div>
-                    <button onclick="addNewToken()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs border-0 shadow-md cursor-pointer">💾 Save & Add Token</button>
-                </div>
-
-                <!-- Saved Tokens List -->
-                <div>
-                    <h4 class="font-extrabold text-sm text-slate-800 mb-3">📋 Active Saved Tokens</h4>
-                    <div id="tokenListContainer" class="space-y-3"></div>
                 </div>
             </div>
         </section>
 
         <!-- =========================================================
-             SLIDE 6: STANDALONE PDF VIEWER SLIDE (For Lecture List / Test PDFs)
+             SLIDE 6: STANDALONE PDF VIEWER SLIDE
              ========================================================= -->
         <section id="slidePdf" class="slide-page hidden-slide">
             <div class="sky-card p-4">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b border-sky-200">
                     <h3 id="pdfTitle" class="font-extrabold text-slate-900 text-sm sm:text-base truncate">📄 PDF Document</h3>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <button onclick="setPdfMode('appx')" class="btn-nav bg-blue-600 text-white border-0 text-xs">AppX Viewer</button>
-                        <button onclick="setPdfMode('gdocs')" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Google Viewer</button>
+                        <button onclick="setPdfMode('appx'); event.stopPropagation();" class="btn-nav bg-blue-600 text-white border-0 text-xs">AppX Viewer</button>
+                        <button onclick="setPdfMode('gdocs'); event.stopPropagation();" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Google Viewer</button>
                         <a id="rawPdfLink" href="#" target="_blank" class="btn-nav bg-amber-500 text-white border-0 text-xs no-underline">📥 Direct Download</a>
-                        <button onclick="closePdfSlide()" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close PDF</button>
+                        <button onclick="closePdfSlide(); event.stopPropagation();" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close PDF</button>
                     </div>
                 </div>
                 <iframe id="pdfFrame" class="w-full h-[82vh] bg-slate-900 rounded-2xl border-2 border-sky-300" src="" frameborder="0"></iframe>
             </div>
         </section>
 
-        <!-- =========================================================
-             SLIDE 7: USER PROFILE & ACCOUNT SETTINGS (FROM LOGS ANALYSIS)
-             Endpoint: /get/get_user_dt?userid=4756316
-             ========================================================= -->
-        <section id="slideProfile" class="slide-page hidden-slide">
-            <div class="max-w-4xl mx-auto">
-                <!-- Top Bar -->
-                <div class="sky-banner flex flex-wrap justify-between items-center gap-3 mb-6">
-                    <div class="flex items-center gap-2">
-                        <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0 text-xs">🏠 Home</button>
-                        <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-900 font-extrabold text-xs uppercase">RWA Official Profile</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="fetchAndRenderUserProfile(true)" class="btn-nav bg-sky-600 text-white border-0 text-xs">🔄 Refresh Live Profile</button>
-                        <button onclick="openLoginSlide()" class="btn-nav bg-emerald-600 text-white border-0 text-xs">➕ Login Another ID</button>
-                        <button onclick="logoutCurrentUser()" class="btn-nav bg-rose-600 text-white border-0 text-xs">🚪 Logout</button>
-                    </div>
-                </div>
-
-                <!-- Main Profile Card -->
-                <div class="sky-card p-6 mb-6">
-                    <div class="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-sky-200">
-                        <div class="relative">
-                            <img id="profPhotoImg" src="" alt="Profile" class="w-24 h-24 rounded-3xl object-cover border-4 border-sky-400 shadow-lg hidden">
-                            <div id="profAvatarFallback" class="w-24 h-24 rounded-3xl bg-gradient-to-br from-sky-500 to-blue-700 text-white font-black text-4xl flex items-center justify-center border-4 border-white shadow-lg">
-                                S
-                            </div>
-                            <span id="profLiveDot" class="w-4 h-4 rounded-full bg-emerald-500 border-2 border-white absolute -bottom-1 -right-1"></span>
-                        </div>
-                        <div class="text-center sm:text-left flex-1">
-                            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                                <h2 id="profFullName" class="text-2xl sm:text-3xl font-black text-slate-900">sandeep</h2>
-                                <span id="profUserIdBadge" class="px-3 py-1 rounded-full bg-sky-100 text-sky-900 font-black text-xs">UID: #4756316</span>
-                                <span id="profUsernameBadge" class="px-3 py-1 rounded-full bg-purple-100 text-purple-900 font-bold text-xs">@fo9OcD</span>
-                            </div>
-                            <p id="profEmailText" class="text-sm font-bold text-slate-600 mt-1">📧 sandeepkaswan254@gmail.com</p>
-                            <p id="profPhoneText" class="text-sm font-extrabold text-blue-700 mt-0.5">📱 +91 9646040254</p>
-                        </div>
-                        <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 text-center min-w-[150px]">
-                            <span class="text-[10px] font-black text-sky-700 uppercase block">Referral Code</span>
-                            <div id="profReferCode" class="text-base font-black text-slate-900 mt-1 select-all">USER9646040254</div>
-                            <span id="profXpBadge" class="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-extrabold">⭐ XP: 0 | Credits: 0</span>
-                        </div>
-                    </div>
-
-                    <!-- Profile Details Grid (All Fields from /get/get_user_dt) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                        <div class="bg-white/90 border border-sky-200 rounded-2xl p-4">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase">📍 State & District</span>
-                            <div id="profStateDist" class="text-base font-black text-slate-900 mt-1">Rajasthan, churu</div>
-                        </div>
-                        <div class="bg-white/90 border border-sky-200 rounded-2xl p-4">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase">🏷️ Category & Gender</span>
-                            <div id="profCatGender" class="text-base font-black text-slate-900 mt-1">OBC • Male</div>
-                        </div>
-                        <div class="bg-white/90 border border-sky-200 rounded-2xl p-4">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase">📅 Joined Date & Time</span>
-                            <div id="profJoinDate" class="text-base font-black text-slate-900 mt-1">2023-11-06 10:22:36</div>
-                        </div>
-                        <div class="bg-white/90 border border-sky-200 rounded-2xl p-4">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase">🪪 Verification Status</span>
-                            <div id="profAadharStatus" class="text-base font-black text-emerald-700 mt-1">Active Account (Status: 0)</div>
-                        </div>
-                        <div class="bg-white/90 border border-sky-200 rounded-2xl p-4">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase">🔥 Weblogin Session ID</span>
-                            <div id="profWebloginId" class="text-sm font-mono font-bold text-slate-800 mt-1 truncate">rzxao89i59e</div>
-                        </div>
-                        <div class="bg-white/90 border border-sky-200 rounded-2xl p-4">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase">🔐 Password (Masked)</span>
-                            <div id="profPassMask" class="text-base font-black text-slate-900 mt-1">******</div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Account Actions (Matching Old Website Menu: Purchases, Saved Questions, Settings, Logout) -->
-                    <div class="mt-6 pt-5 border-t border-sky-200 flex flex-wrap gap-3 justify-between items-center">
-                        <div class="flex flex-wrap gap-2.5">
-                            <button onclick="openExplorerSlide('paid')" class="btn-watch text-xs">📦 My Purchases (Paid Batches)</button>
-                            <button onclick="openTestSeriesExplorer('paid_ts')" class="btn-nav bg-indigo-600 text-white border-0 text-xs">🏆 My Test Series</button>
-                            <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0 text-xs">🔑 Token Settings</button>
-                        </div>
-                        <button onclick="logoutCurrentUser()" class="btn-nav bg-rose-600 text-white border-0 text-xs px-5 py-2.5">🚪 Logout Account</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- =========================================================
-             SLIDE 8: LOGIN SLIDE (MOBILE/EMAIL + PASSWORD OR JWT TOKEN)
-             ========================================================= -->
-        <section id="slideLogin" class="slide-page hidden-slide">
-            <div class="max-w-md mx-auto sky-card p-6 mt-4">
-                <div class="flex justify-between items-center pb-4 mb-5 border-b border-sky-200">
-                    <div>
-                        <span class="text-[11px] font-black text-sky-700 uppercase">Rojgar With Ankit Auth</span>
-                        <h2 class="text-2xl font-black text-slate-900">🔐 Account Login</h2>
-                    </div>
-                    <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0 text-xs">🏠 Home</button>
-                </div>
-
-                <!-- Login Mode Switcher Tabs -->
-                <div class="grid grid-cols-2 gap-2 p-1 bg-sky-100 rounded-2xl mb-5">
-                    <button id="tabLoginCred" onclick="switchLoginTab('cred')" class="py-2 rounded-xl font-black text-xs bg-blue-600 text-white border-0 cursor-pointer transition-all">📱 Mobile / Password</button>
-                    <button id="tabLoginToken" onclick="switchLoginTab('token')" class="py-2 rounded-xl font-black text-xs bg-transparent text-slate-700 border-0 cursor-pointer transition-all">🔑 JWT Token / UID</button>
-                </div>
-
-                <!-- Status / Error Alert Box -->
-                <div id="loginStatusAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-extrabold"></div>
-
-                <!-- TAB 1: Phone/Email + Password Login -->
-                <div id="loginFormCred" class="space-y-4">
-                    <div>
-                        <label class="text-xs font-extrabold text-slate-700 block mb-1">📱 Mobile Number or Email</label>
-                        <input id="loginPhoneInput" type="text" placeholder="e.g. 9646040254 or sandeepkaswan254@gmail.com" 
-                               class="w-full bg-white border-2 border-sky-200 focus:border-blue-600 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-semibold outline-none">
-                    </div>
-                    <div>
-                        <label class="text-xs font-extrabold text-slate-700 block mb-1">🔒 Password</label>
-                        <input id="loginPassInput" type="password" placeholder="Enter your RWA password" 
-                               class="w-full bg-white border-2 border-sky-200 focus:border-blue-600 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-semibold outline-none">
-                    </div>
-                    <button onclick="handleCredentialLogin()" id="btnSubmitCredLogin" class="w-full btn-watch py-3 text-sm font-black">
-                        🚀 Login to RWA Portal
-                    </button>
-                </div>
-
-                <!-- TAB 2: Direct JWT Token + User-ID Login (From Logs) -->
-                <div id="loginFormToken" class="space-y-4 hidden">
-                    <div>
-                        <label class="text-xs font-extrabold text-slate-700 block mb-1">🆔 User-ID (Optional - Auto-detected from JWT)</label>
-                        <input id="loginUidInput" type="text" placeholder="e.g. 4756316" 
-                               class="w-full bg-white border-2 border-sky-200 focus:border-blue-600 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-semibold outline-none">
-                    </div>
-                    <div>
-                        <label class="text-xs font-extrabold text-slate-700 block mb-1">🔑 Authorization JWT Token</label>
-                        <textarea id="loginJwtInput" rows="4" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." 
-                                  class="w-full bg-white border-2 border-sky-200 focus:border-blue-600 rounded-xl p-3 text-xs text-slate-900 font-mono outline-none"></textarea>
-                    </div>
-                    <button onclick="handleTokenLogin()" class="w-full btn-watch py-3 text-sm font-black">
-                        ⚡ Verify Token & Load Profile
-                    </button>
-                    <button onclick="restoreDefaultSandeepLogin()" class="w-full btn-nav bg-amber-500 text-white border-0 py-2.5 text-xs">
-                        ♻️ Restore Default Logged-In Account (sandeep #4756316)
-                    </button>
-                </div>
-            </div>
-        </section>
-
     </main>
 
-    <!-- Modular JS Files -->
-    <script src="auth.js"></script>
     <script src="player.js"></script>
     <script src="app.js"></script>
 </body>
