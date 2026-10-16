@@ -398,10 +398,10 @@ if (fsBtn && screenEl) {
 document.addEventListener("fullscreenchange", () => {
     if (document.fullscreenElement) {
         if (headerBar) headerBar.classList.add("hidden");
-        if (fsBtn) fsBtn.textContent = "🗗 Minimize";
+        if (fsBtn) fsBtn.textContent = "🗗";
     } else {
         if (headerBar) headerBar.classList.remove("hidden");
-        if (fsBtn) fsBtn.textContent = "⛶ Full";
+        if (fsBtn) fsBtn.textContent = "⛶";
     }
 });
 
