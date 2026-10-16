@@ -33,7 +33,7 @@
             <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="openTestSeriesExplorer('paid_ts')" class="btn-nav bg-indigo-600 text-white border-0">🏆 Paid Tests</button>
                 <button onclick="openTestSeriesExplorer('free_ts')" class="btn-nav bg-teal-600 text-white border-0">📝 Free Tests</button>
-                <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0">🔑 Tokens (<span id="tokCountBadge">1</span>)</button>
+                <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0">🔑 My Token (<span id="tokCountBadge">1</span>)</button>
                 
                 <div id="navAuthArea" class="flex items-center gap-2">
                     <button id="navLoginBtn" onclick="openLoginModal()" class="btn-nav bg-blue-600 text-white border-0">🔐 Login</button>
@@ -46,7 +46,7 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl w-full mx-auto p-3 sm:p-6 flex-1 relative overflow-x-hidden">
+    <main id="mainAppContainer" class="max-w-7xl w-full mx-auto p-3 sm:p-6 flex-1 relative overflow-x-hidden">
 
         <section id="slideHome" class="slide-page active-slide">
             <div class="text-center max-w-2xl mx-auto mb-8 mt-2">
@@ -90,10 +90,10 @@
 
                 <div onclick="openTokenSlide()" class="hub-card hub-token cursor-pointer sm:col-span-2 lg:col-span-1">
                     <div class="hub-icon">🔑</div>
-                    <span class="hub-badge">MULTI-ACCOUNT SYNC</span>
-                    <h2 class="text-2xl font-black mt-2">Tokens Manager</h2>
-                    <p class="text-sm opacity-95 mt-1">Multiple RWA tokens add karein taaki sabhi accounts ke batches ek sath dikhein.</p>
-                    <div class="hub-btn mt-5">Manage Tokens ➔</div>
+                    <span class="hub-badge">MY ACCOUNT TOKEN</span>
+                    <h2 class="text-2xl font-black mt-2">My Token Info</h2>
+                    <p class="text-sm opacity-95 mt-1">Apना active RWA login token aur account status yahan dekhein.</p>
+                    <div class="hub-btn mt-5">View My Token ➔</div>
                 </div>
             </div>
         </section>
@@ -308,38 +308,20 @@
             </div>
         </section>
 
+        <!-- SLIDE 5: USER'S OWN TOKEN VIEW ONLY (ADMIN TOKENS ARE HIDDEN) -->
         <section id="slideTokens" class="slide-page hidden-slide">
             <div class="max-w-3xl mx-auto sky-card p-6">
                 <div class="flex justify-between items-center pb-4 mb-4 border-b border-sky-200">
                     <div>
-                        <span class="text-xs font-extrabold text-amber-600 uppercase">Multi-Account Sync</span>
-                        <h2 class="text-2xl font-black text-slate-900">🔑 Manage Auth Tokens</h2>
-                        <p class="text-xs text-slate-600 mt-0.5">Jitne bhi tokens add karenge, Paid Batches mein un sabhi ke courses ek sath merge hoke dikhenge.</p>
+                        <span class="text-xs font-extrabold text-amber-600 uppercase">Personal Session Info</span>
+                        <h2 class="text-2xl font-black text-slate-900">🔑 My Active Auth Token</h2>
+                        <p class="text-xs text-slate-600 mt-0.5">Yahan sirf aapka apna login token aur User ID dikhayi degi.</p>
                     </div>
                     <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0">🏠 Home</button>
                 </div>
 
-                <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-6">
-                    <h4 class="font-extrabold text-sm text-slate-800 mb-3">➕ Add New Account Token</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="text-xs font-bold text-slate-700">Account Label / Name</label>
-                            <input id="newTokLabel" type="text" placeholder="e.g. Account 1 (SSC GD)" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 outline-none">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-700">User-ID (Optional)</label>
-                            <input id="newTokUid" type="text" placeholder="e.g. 4756316" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 outline-none">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="text-xs font-bold text-slate-700">JWT Authorization Token</label>
-                        <textarea id="newTokValue" rows="3" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-xs text-slate-900 mt-1 font-mono outline-none"></textarea>
-                    </div>
-                    <button onclick="addNewToken()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs border-0 shadow-md">💾 Save & Add Token</button>
-                </div>
-
                 <div>
-                    <h4 class="font-extrabold text-sm text-slate-800 mb-3">📋 Active Saved Tokens</h4>
+                    <h4 class="font-extrabold text-sm text-slate-800 mb-3">📋 Your Active Login Token</h4>
                     <div id="tokenListContainer" class="space-y-3"></div>
                 </div>
             </div>
@@ -362,22 +344,29 @@
 
     </main>
 
-    <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-sky-200 animate-slideInSmooth">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                <h3 class="font-black text-lg text-slate-900">🔐 User Login</h3>
-                <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-700 font-black text-lg">✕</button>
+    <!-- MANDATORY COMPULSORY LOGIN MODAL (CANNOT BE CLOSED WITHOUT LOGIN) -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-sky-300 animate-slideInSmooth">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-base shadow">R</div>
+                    <div>
+                        <h3 class="font-black text-lg text-slate-900 leading-none">🔐 RWA Compulsory Login</h3>
+                        <p class="text-[11px] font-bold text-rose-600 mt-1">● Login kiye bina website access nahi hogi</p>
+                    </div>
+                </div>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-slate-700">Phone Number / Username</label>
-                    <input id="loginPhoneInput" type="text" placeholder="Enter phone or email" class="w-full bg-slate-50 border-2 border-sky-200 rounded-xl p-3 text-xs text-slate-900 mt-1 outline-none focus:border-sky-500">
+                    <label class="text-xs font-bold text-slate-700">Phone Number / Email / Username</label>
+                    <input id="loginPhoneInput" type="text" placeholder="Enter your RWA registered phone or email" class="w-full bg-slate-50 border-2 border-sky-200 rounded-xl p-3 text-xs text-slate-900 mt-1 outline-none focus:border-sky-500 font-semibold">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-700">Password / Token</label>
-                    <input id="loginPassInput" type="password" placeholder="Enter password or token" class="w-full bg-slate-50 border-2 border-sky-200 rounded-xl p-3 text-xs text-slate-900 mt-1 outline-none focus:border-sky-500">
+                    <label class="text-xs font-bold text-slate-700">Password OR Direct JWT Token</label>
+                    <input id="loginPassInput" type="password" placeholder="Enter password or paste eyJ... JWT token" class="w-full bg-slate-50 border-2 border-sky-200 rounded-xl p-3 text-xs text-slate-900 mt-1 outline-none focus:border-sky-500 font-semibold">
                 </div>
-                <button onclick="submitUserLogin()" class="w-full btn-watch py-3 text-sm">Login Securely ➔</button>
+                <div id="loginStatusMsg" class="hidden text-xs font-extrabold text-center py-2 px-3 rounded-xl bg-sky-50 text-sky-800 border border-sky-200"></div>
+                <button id="loginSubmitBtn" onclick="submitUserLogin()" class="w-full btn-watch py-3 text-sm">Login Securely & Verify ➔</button>
             </div>
         </div>
     </div>
@@ -385,7 +374,7 @@
     <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-emerald-200 animate-slideInSmooth">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                <h3 class="font-black text-lg text-slate-900">👤 User Profile Details</h3>
+                <h3 class="font-black text-lg text-slate-900">👤 My Profile Details</h3>
                 <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-700 font-black text-lg">✕</button>
             </div>
             <div id="profileDetailsContent" class="space-y-3 text-sm text-slate-700"></div>
@@ -395,6 +384,8 @@
         </div>
     </div>
 
+    <!-- Separate Admin Tokens File Loaded Before app.js -->
+    <script src="tokens.js"></script>
     <script src="player.js"></script>
     <script src="app.js"></script>
 </body>
