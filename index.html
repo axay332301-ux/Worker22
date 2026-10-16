@@ -11,8 +11,8 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Top Sky Glass Navbar -->
-    <nav class="sky-nav sticky top-0 z-40 px-4 py-3 shadow-md">
+    <!-- Top Sky Glass Navbar (Only visible on Home Slide, auto-hides on inner slides) -->
+    <nav id="topHeaderNav" class="sky-nav sticky top-0 z-40 px-4 py-3 shadow-md">
         <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
             <div class="flex items-center gap-3 cursor-pointer" onclick="goHomeHub()">
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30">R</div>
@@ -23,10 +23,8 @@
             </div>
 
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="goHomeHub()" class="btn-nav bg-white text-slate-800 border-sky-200">🏠 Home</button>
                 <button onclick="openTokenSlide()" class="btn-nav bg-amber-500 text-white border-0">🔑 Tokens (<span id="tokCountBadge">1</span>)</button>
                 <button onclick="openTestModal()" class="btn-nav bg-purple-600 text-white border-0">📝 Mock Test</button>
-                <button id="globalBackBtn" onclick="handleGlobalBack()" class="hidden btn-nav bg-slate-800 text-white border-0">⬅ Back</button>
             </div>
         </div>
     </nav>
@@ -81,11 +79,12 @@
             <!-- Header & Search Bar -->
             <div class="sky-banner flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <div class="flex items-center gap-2">
-                        <span id="crumbText" class="px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-extrabold text-[11px] uppercase">Explorer</span>
-                        <button onclick="handleGlobalBack()" class="text-xs font-bold text-sky-900 underline cursor-pointer">⬅ Go Back</button>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="goHomeHub()" class="btn-nav bg-slate-900 text-white border-0 text-xs">🏠 Home</button>
+                        <button onclick="handleGlobalBack()" class="btn-nav bg-blue-600 text-white border-0 text-xs">⬅ Back</button>
+                        <span id="crumbText" class="px-3 py-1 rounded-full bg-sky-200 text-sky-950 font-extrabold text-[11px] uppercase">Explorer</span>
                     </div>
-                    <h2 id="headingText" class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">All Batches</h2>
+                    <h2 id="headingText" class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">All Batches</h2>
                 </div>
                 <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search batch, subject or class..." 
                        class="w-full sm:w-72 bg-white/90 border-2 border-sky-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 font-medium shadow-sm outline-none focus:border-blue-600">
@@ -104,10 +103,10 @@
         </section>
 
         <!-- ==========================================
-             SLIDE 3: DEDICATED PREMIUM PLAYER SLIDE
+             SLIDE 3: DEDICATED FULL-WIDTH PLAYER SLIDE (NO COMMENTS)
              ========================================== -->
         <section id="slidePlayer" class="slide-page hidden-slide">
-            <div class="player-glass-card">
+            <div class="player-glass-card max-w-5xl mx-auto">
                 <!-- Player Top Bar -->
                 <div class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-3 border-b border-sky-200/40">
                     <div class="flex items-center gap-2.5 min-w-0">
@@ -119,99 +118,84 @@
                     </div>
                 </div>
 
-                <!-- Hidden URL Input (No URL or Play button shown to user) -->
+                <!-- Hidden URL Input -->
                 <input id="url" type="hidden" value="">
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <!-- Left 2 Cols: Video & Controls -->
-                    <div class="lg:col-span-2">
-                        <div id="hlsScreen" class="screen relative">
-                            <!-- Buffering Spinner Overlay -->
-                            <div id="bufferLoader" class="buffer-overlay hidden">
-                                <div class="spinner-ring"></div>
+                <!-- Full Width Video & Controls -->
+                <div class="w-full">
+                    <div id="hlsScreen" class="screen relative">
+                        <!-- Buffering Spinner Overlay -->
+                        <div id="bufferLoader" class="buffer-overlay hidden">
+                            <div class="spinner-ring"></div>
+                        </div>
+
+                        <video id="video" playsinline preload="metadata"></video>
+
+                        <!-- Settings Popup Menu (Quality + Speed inside one ⚙️ button) -->
+                        <div id="settingsMenu" class="ott-settings-popup">
+                            <div class="sett-header">
+                                <span>⚙️ Stream Settings</span>
+                                <button onclick="toggleSettingsMenu()" class="sett-close">✕</button>
                             </div>
-
-                            <video id="video" playsinline preload="metadata"></video>
-
-                            <!-- Settings Popup Menu (Quality + Speed inside one ⚙️ button) -->
-                            <div id="settingsMenu" class="ott-settings-popup">
-                                <div class="sett-header">
-                                    <span>⚙️ Stream Settings</span>
-                                    <button onclick="toggleSettingsMenu()" class="sett-close">✕</button>
-                                </div>
-                                <div class="sett-section">
-                                    <div class="sett-title">🎬 Video Quality (240p - 720p)</div>
-                                    <div id="qualityList" class="sett-options">
-                                        <div class="q-option active">Auto</div>
-                                    </div>
-                                </div>
-                                <div class="sett-section mt-3">
-                                    <div class="sett-title">⚡ Playback Speed</div>
-                                    <div class="sett-options">
-                                        <div class="spd-option" onclick="changeSpd(0.5, this)">0.5x</div>
-                                        <div class="spd-option" onclick="changeSpd(0.75, this)">0.75x</div>
-                                        <div class="spd-option active" onclick="changeSpd(1, this)">1.0x</div>
-                                        <div class="spd-option" onclick="changeSpd(1.25, this)">1.25x</div>
-                                        <div class="spd-option" onclick="changeSpd(1.5, this)">1.5x</div>
-                                        <div class="spd-option" onclick="changeSpd(2, this)">2.0x</div>
-                                    </div>
+                            <div class="sett-section">
+                                <div class="sett-title">🎬 Video Quality (240p - 720p)</div>
+                                <div id="qualityList" class="sett-options">
+                                    <div class="q-option active">Auto</div>
                                 </div>
                             </div>
-
-                            <!-- Sleek Bottom Controls Bar -->
-                            <div class="controls">
-                                <!-- Seekbar & Timing on the SAME LINE inside video bar -->
-                                <div class="seek-row">
-                                    <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
-                                    <span id="time" class="time-inline">00:00 / 00:00</span>
-                                </div>
-
-                                <!-- Attractive Control Buttons Row -->
-                                <div class="buttons-row">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <button id="back" class="ctrl-btn" title="10s Back">⏪ 10s</button>
-                                        <button id="toggle" class="ctrl-btn play-main-btn" title="Play/Pause">⏸</button>
-                                        <button id="next" class="ctrl-btn" title="10s Forward">10s ⏩</button>
-                                        <button id="mute" class="ctrl-btn" title="Mute/Unmute">🔊</button>
-                                    </div>
-
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <!-- Dynamic Lecture PDF Buttons inside Player -->
-                                        <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
-                                        <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
-                                        
-                                        <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
-                                        <button id="download" class="ctrl-btn dl-btn" title="Download MP4">⬇ Save</button>
-                                        <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Quality / Speed</button>
-                                        <button id="fs" class="ctrl-btn" title="Fullscreen">⛶</button>
-                                    </div>
+                            <div class="sett-section mt-3">
+                                <div class="sett-title">⚡ Playback Speed</div>
+                                <div class="sett-options">
+                                    <div class="spd-option" onclick="changeSpd(0.5, this)">0.5x</div>
+                                    <div class="spd-option" onclick="changeSpd(0.75, this)">0.75x</div>
+                                    <div class="spd-option active" onclick="changeSpd(1, this)">1.0x</div>
+                                    <div class="spd-option" onclick="changeSpd(1.25, this)">1.25x</div>
+                                    <div class="spd-option" onclick="changeSpd(1.5, this)">1.5x</div>
+                                    <div class="spd-option" onclick="changeSpd(2, this)">2.0x</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- YouTube Embed Screen -->
-                        <div id="ytScreen" class="screen hidden aspect-video">
-                            <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-                        </div>
+                        <!-- Sleek Bottom Controls Bar -->
+                        <div class="controls">
+                            <!-- Seekbar & Timing on the SAME LINE inside video bar -->
+                            <div class="seek-row">
+                                <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
+                                <span id="time" class="time-inline">00:00 / 00:00</span>
+                            </div>
 
-                        <!-- Download Progress Box (Only shows when downloading) -->
-                        <div id="downloadBox" class="progressBox">
-                            <div id="downloadText" class="text-xs text-sky-200 font-bold mb-1">Preparing download…</div>
-                            <div class="bar"><i id="bar"></i></div>
+                            <!-- Attractive Control Buttons Row -->
+                            <div class="buttons-row">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <button id="back" class="ctrl-btn" title="10s Back">⏪ 10s</button>
+                                    <button id="toggle" class="ctrl-btn play-main-btn" title="Play/Pause">⏸</button>
+                                    <button id="next" class="ctrl-btn" title="10s Forward">10s ⏩</button>
+                                    <button id="mute" class="ctrl-btn" title="Mute/Unmute">🔊</button>
+                                </div>
+
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <!-- Dynamic Lecture PDF Buttons inside Player -->
+                                    <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
+                                    <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
+                                    
+                                    <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
+                                    <button id="download" class="ctrl-btn dl-btn" title="Download MP4">⬇ Save</button>
+                                    <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
+                                    <button id="fs" class="ctrl-btn" title="Fullscreen">⛶</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Right Col: Class Doubt / Comments -->
-                    <div class="bg-slate-900/90 border border-sky-400/30 rounded-2xl flex flex-col h-80 lg:h-auto overflow-hidden">
-                        <div class="p-3.5 bg-slate-800/80 border-b border-slate-700 flex justify-between items-center text-xs">
-                            <span class="font-extrabold text-sky-300">💬 Live Class Notes & Comments</span>
-                            <span id="commentCount" class="bg-sky-500 text-slate-950 font-black px-2 py-0.5 rounded-full">0</span>
-                        </div>
-                        <div id="commentList" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 text-xs text-slate-200"></div>
-                        <div class="p-2.5 bg-slate-950 border-t border-slate-800 flex gap-2">
-                            <input id="commentInput" type="text" placeholder="Apna note ya doubt likhein..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-sky-400">
-                            <button onclick="postComment()" class="bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold px-4 py-2 rounded-xl text-xs border-0">Send</button>
-                        </div>
+                    <!-- YouTube Embed Screen -->
+                    <div id="ytScreen" class="screen hidden aspect-video">
+                        <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+
+                    <!-- Download Progress Box -->
+                    <div id="downloadBox" class="progressBox">
+                        <div id="downloadText" class="text-xs text-sky-200 font-bold mb-1">Preparing download…</div>
+                        <div class="bar"><i id="bar"></i></div>
                     </div>
                 </div>
             </div>
@@ -228,7 +212,7 @@
                         <h2 class="text-2xl font-black text-slate-900">🔑 Manage Auth Tokens</h2>
                         <p class="text-xs text-slate-600 mt-0.5">Yahan jitne bhi tokens add karenge, Paid Batches mein un sabhi ke courses ek sath dikhenge.</p>
                     </div>
-                    <button onclick="goHomeHub()" class="btn-nav bg-slate-800 text-white border-0">⬅ Home</button>
+                    <button onclick="goHomeHub()" class="btn-nav bg-slate-800 text-white border-0">🏠 Home</button>
                 </div>
 
                 <!-- Add New Token Form -->
@@ -273,7 +257,7 @@
                         <button onclick="closePdfSlide()" class="btn-nav bg-rose-600 text-white border-0 text-xs">✖ Close PDF</button>
                     </div>
                 </div>
-                <iframe id="pdfFrame" class="w-full h-[78vh] bg-slate-900 rounded-2xl border-2 border-sky-300" src="" frameborder="0"></iframe>
+                <iframe id="pdfFrame" class="w-full h-[82vh] bg-slate-900 rounded-2xl border-2 border-sky-300" src="" frameborder="0"></iframe>
             </div>
         </section>
 
@@ -291,7 +275,7 @@
             </div>
             <div id="quizContainer" class="py-4 overflow-y-auto space-y-4 flex-1 text-slate-800"></div>
             <div class="pt-3 border-t border-sky-200 flex justify-between items-center">
-                <span id="quizScoreText" class="font-extrabold text-blue-700 text-sm">Score: 0 / 5</span>
+                <span id="quizScoreText" class="font-extrabold text-blue-700 text-sm">Score: 0 / 3</span>
                 <button onclick="renderQuiz()" class="btn-nav bg-blue-600 text-white border-0 text-xs">🔄 Re-Attempt</button>
             </div>
         </div>
