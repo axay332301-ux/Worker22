@@ -5,7 +5,6 @@ const DEFAULT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjQ3NTYzMTYi
 
 const API_BASE = "https://rozgarapinew.teachx.in";
 const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
-const WORKER_PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 
 // Multi-Token Storage Initialization
 function getSavedTokens() {
@@ -107,8 +106,7 @@ const DB = {
         { q: "भारतीय संविधान में मौलिक कर्तव्य किस देश से लिए गए हैं?", opts: ["अमेरिका", "रूस (USSR)", "ब्रिटेन", "आयरलैंड"], ans: 1 },
         { q: "सिंधु घाटी सभ्यता का बंदरगाह नगर कौन सा था?", opts: ["कालीबंगा", "लोथल", "रोपड़", "बनावली"], ans: 1 },
         { q: "पंचायती राज व्यवस्था का शुभारंभ भारत में कहाँ हुआ?", opts: ["नागौर (राजस्थान)", "सूरत (गुजरात)", "पटना (बिहार)", "झाँसी (UP)"], ans: 0 }
-    ],
-    comments: [{ user: "RWA System", text: "Welcome! Aap yahan class ke important timestamps aur notes likh sakte hain." }]
+    ]
 };
 
 let state = {
@@ -131,7 +129,7 @@ let state = {
 };
 
 // =====================================================
-// SLIDE NAVIGATION ENGINE (Every section opens in a slide)
+// SLIDE NAVIGATION ENGINE (Hides Top Navbar on inner slides)
 // =====================================================
 function showSlide(slideId) {
     if (state.currentSlide !== slideId) {
@@ -151,10 +149,14 @@ function showSlide(slideId) {
         }
     });
 
-    const backBtn = document.getElementById("globalBackBtn");
-    if (backBtn) {
-        if (slideId === "slideHome") backBtn.classList.add("hidden");
-        else backBtn.classList.remove("hidden");
+    // Hide top website header on all slides except Home Slide
+    const topNav = document.getElementById("topHeaderNav");
+    if (topNav) {
+        if (slideId === "slideHome") {
+            topNav.classList.remove("hidden");
+        } else {
+            topNav.classList.add("hidden");
+        }
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -249,7 +251,6 @@ async function renderPaidBatches() {
     let mergedCourses = [];
     const seenIds = new Set();
 
-    // Loop through every added token and fetch its purchased courses
     for (const tokObj of TOKENS) {
         const endpointsToTry = [
             `/get/mycourseweb?userid=${tokObj.userId || "4756316"}`,
@@ -484,7 +485,7 @@ async function openPaidLectures(topId, topName) {
 }
 
 // =====================================================
-// MASTER LINK & MULTI-QUALITY EXTRACTOR (240p/360p/480p/720p)
+// MASTER LINK EXTRACTOR (Stores clean decrypted URLs so player.js handles token + proxy properly)
 // =====================================================
 function extractQualitiesFromItem(item) {
     const qMap = {};
@@ -493,15 +494,12 @@ function extractQualitiesFromItem(item) {
         let u = decryptAppX(rawEncPath);
         if (u && u.startsWith("http")) {
             if (u.includes("playlist_eof.m3u8")) return;
-            if (u.includes(".m3u8") && !u.includes("workers.dev")) {
-                u = WORKER_PROXY + encodeURIComponent(u);
-            }
             qMap[qualityName] = u;
         }
     }
 
     (item.encrypted_links || []).forEach(q => {
-        addValidLink((q.quality || "720p"), q.path);
+        addValidLink((q.quality || "720p") + " Master", q.path);
     });
 
     (item.livestream_links || []).forEach(q => {
@@ -515,9 +513,8 @@ function extractQualitiesFromItem(item) {
     const decFile = decryptAppX(item.file_link || "");
     if (decFile) {
         if (decFile.startsWith("http") && !decFile.includes("playlist_eof.m3u8")) {
-            let finalU = decFile.includes(".m3u8") && !decFile.includes("workers.dev") ? WORKER_PROXY + encodeURIComponent(decFile) : decFile;
-            if (!Object.values(qMap).includes(finalU)) {
-                qMap["720p HD"] = finalU;
+            if (!Object.values(qMap).includes(decFile)) {
+                qMap["720p HD"] = decFile;
             }
         } else if (!decFile.startsWith("http") && decFile.length >= 10 && decFile.length <= 15) {
             qMap["YouTube HD"] = decFile;
@@ -568,18 +565,16 @@ function renderLectureList(list) {
 }
 
 // =====================================================
-// DEDICATED PLAYER SLIDE LAUNCHER (With Linked PDFs)
+// DEDICATED PLAYER SLIDE LAUNCHER
 // =====================================================
 async function playClassInRwaPlayer(key) {
     state.activeKey = key;
     const info = state.mediaMap[key];
     if (!info) return;
 
-    // Open Player in its own Dedicated Slide
     showSlide("slidePlayer");
     document.getElementById("playingTitle").textContent = "▶ " + info.title;
 
-    // Bind PDF 1 & PDF 2 buttons inside the Player to the exact same lecture PDFs
     const pPdf1 = document.getElementById("playerPdf1");
     const pPdf2 = document.getElementById("playerPdf2");
     if (pPdf1) {
@@ -593,7 +588,6 @@ async function playClassInRwaPlayer(key) {
 
     const urlInput = document.getElementById("url");
 
-    // Fetch fresh multi-quality links (720p, 480p, 360p, 240p) from API
     if (state.cat === "paid" && info.id) {
         const fresh = await fetchAPIWithToken(
             `/get/fetchVideoDetailsById?course_id=${state.courseId}&video_id=${info.id}&ytflag=0&folder_wise_course=0&lc_app_api_url=`,
@@ -604,7 +598,6 @@ async function playClassInRwaPlayer(key) {
             const freshMap = extractQualitiesFromItem(fresh);
             info.qualities = { ...freshMap, ...info.qualities };
 
-            // Also update PDFs if returned in fresh details
             const fPdf1 = resolvePdfUrl(fresh.pdf_link || fresh.ypdf_link, fresh.ypdf_link2);
             const fPdf2 = resolvePdfUrl(fresh.pdf_link2, fresh.ypdf_link2);
             if (fPdf1 && !info.pdf1) { info.pdf1 = fPdf1; if (pPdf1) pPdf1.classList.remove("hidden"); }
@@ -624,7 +617,6 @@ async function playClassInRwaPlayer(key) {
     }
 }
 
-// Triggered when user clicks PDF 1 or PDF 2 inside the video player
 window.openActivePlayerPdf = function(num) {
     if (!state.activeKey) return;
     openPdf(state.activeKey, num);
@@ -655,7 +647,6 @@ function openPdf(key, num) {
     const u = num === 2 ? info.pdf2 : info.pdf1;
     if (!u) return;
 
-    // Pause video if playing
     const vid = document.getElementById("video");
     if (vid && !vid.paused) vid.pause();
 
@@ -739,34 +730,13 @@ function deleteToken(id) {
 }
 
 // =====================================================
-// SEARCH, COMMENTS & MOCK TEST UTILITIES
+// SEARCH & MOCK TEST UTILITIES
 // =====================================================
 function filterGrid() {
     const q = document.getElementById("searchBox").value.toLowerCase();
     document.querySelectorAll("#mainGrid .grid-card").forEach(el => {
         el.style.display = el.innerText.toLowerCase().includes(q) ? "" : "none";
     });
-}
-
-function renderComments() {
-    const list = document.getElementById("commentList");
-    const count = document.getElementById("commentCount");
-    if (!list || !count) return;
-    count.textContent = DB.comments.length;
-    list.innerHTML = DB.comments.map(c => `
-        <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-2.5">
-            <span class="font-extrabold text-sky-400 text-[11px]">${c.user}:</span>
-            <p class="text-slate-200 mt-0.5">${c.text}</p>
-        </div>
-    `).join("");
-}
-
-function postComment() {
-    const inp = document.getElementById("commentInput");
-    if (!inp || !inp.value.trim()) return;
-    DB.comments.push({ user: "Student", text: inp.value.trim() });
-    inp.value = "";
-    renderComments();
 }
 
 function toggleModal(id) {
@@ -812,5 +782,4 @@ window.checkQuizAns = function(btn, qIdx, oIdx) {
 
 // Initialize Portal on Home Hub Slide
 updateTokenBadge();
-renderComments();
 showSlide("slideHome");
