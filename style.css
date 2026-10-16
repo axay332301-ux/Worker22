@@ -303,17 +303,25 @@ video {
     to { transform: rotate(360deg); }
 }
 
-/* 90% TRANSPARENT OVERLAY CONTROLS WITH CLEAN ICON BUTTONS */
+/* 90% TRANSPARENT OVERLAY CONTROLS (HIDE/SHOW ANIMATION) */
 .controls {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.1); /* 90% Transparent */
+    background: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(4px);
     z-index: 25;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 1;
+    visibility: visible;
+}
+
+.controls.hidden-controls {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .seek-row {
@@ -351,7 +359,7 @@ video {
 }
 
 .ctrl-icon-btn {
-    background: rgba(0, 0, 0, 0.15); /* 90% transparent icon background */
+    background: rgba(0, 0, 0, 0.15);
     color: #ffffff;
     border: none;
     border-radius: 50%;
