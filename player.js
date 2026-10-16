@@ -25,15 +25,26 @@ function valid(u) {
     }
 }
 
-function manifest(u) {
+// Ensure original URL is unwrapped if already proxied so token can be extracted cleanly
+function unwrapOriginalUrl(u) {
     try {
-        const x = new URL(u);
-        if (x.hostname.includes("workers.dev") && x.searchParams.has("url")) return u;
-        if (x.pathname.toLowerCase().includes(".m3u8") || x.hostname.includes("classx.co.in") || x.hostname.includes("akamai.net.in")) {
-            return PROXY + encodeURIComponent(u);
+        const parsed = new URL(u);
+        if (parsed.hostname.includes("workers.dev") && parsed.searchParams.has("url")) {
+            return decodeURIComponent(parsed.searchParams.get("url"));
         }
     } catch {}
     return u;
+}
+
+function manifest(u) {
+    const rawUrl = unwrapOriginalUrl(u);
+    try {
+        const x = new URL(rawUrl);
+        if (x.pathname.toLowerCase().includes(".m3u8") || x.hostname.includes("classx.co.in") || x.hostname.includes("akamai.net.in")) {
+            return PROXY + encodeURIComponent(rawUrl);
+        }
+    } catch {}
+    return rawUrl;
 }
 
 function segment(u) {
@@ -43,18 +54,30 @@ function segment(u) {
 class BackendLoader extends Hls.DefaultConfig.loader {
     load(ctx, cfg, cb) {
         let originalUrl = ctx.url;
-        let mainUrl = input ? input.value.trim() : "";
+        let mainUrl = input ? unwrapOriginalUrl(input.value.trim()) : "";
 
+        // 1. Main input URL (decoded) se token extract karke cache karna
         let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
         if (match) {
             cachedToken = match[1];
         }
 
+        // 2. Agar segment URL pehle se worker proxy se wrap hoke aaya hai toh usko direct jane do
+        if (originalUrl.includes("allswbatch22.workers.dev")) {
+            ctx.url = originalUrl;
+            super.load(ctx, cfg, cb);
+            return;
+        }
+
+        // 3. Har segment ya child m3u8 URL ke sath automatic token jodna
         if (cachedToken && !originalUrl.includes("edge-cache-token=")) {
             originalUrl += (originalUrl.includes("?") ? "&" : "?") + cachedToken;
         }
 
-        if (segment(originalUrl) && !originalUrl.includes("workers.dev")) {
+        // 4. Child playlist (.m3u8) ko PROXY par aur video segments (.ts) ko SEGMENT par bhejna
+        if (originalUrl.includes(".m3u8")) {
+            ctx.url = PROXY + encodeURIComponent(originalUrl);
+        } else if (segment(originalUrl)) {
             ctx.url = SEGMENT + encodeURIComponent(originalUrl);
         } else {
             ctx.url = originalUrl;
@@ -96,16 +119,17 @@ function start() {
     stopPlayer();
     showLoader(true);
 
-    const isYT = (!raw.startsWith("http") && raw.length >= 10 && raw.length <= 15) || raw.includes("youtube.com") || raw.includes("youtu.be");
+    const cleanRaw = unwrapOriginalUrl(raw);
+    const isYT = (!cleanRaw.startsWith("http") && cleanRaw.length >= 10 && cleanRaw.length <= 15) || cleanRaw.includes("youtube.com") || cleanRaw.includes("youtu.be");
 
     if (isYT) {
         showLoader(false);
         document.getElementById("hlsScreen").classList.add("hidden");
         document.getElementById("ytScreen").classList.remove("hidden");
 
-        let ytId = raw;
-        if (raw.includes("v=")) ytId = raw.split("v=")[1].split("&")[0];
-        else if (raw.includes("youtu.be/")) ytId = raw.split("youtu.be/")[1].split("?")[0];
+        let ytId = cleanRaw;
+        if (cleanRaw.includes("v=")) ytId = cleanRaw.split("v=")[1].split("&")[0];
+        else if (cleanRaw.includes("youtu.be/")) ytId = cleanRaw.split("youtu.be/")[1].split("?")[0];
 
         const ytFrame = document.getElementById("ytFrame");
         if (ytFrame) ytFrame.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
@@ -115,12 +139,16 @@ function start() {
     document.getElementById("ytScreen").classList.add("hidden");
     document.getElementById("hlsScreen").classList.remove("hidden");
 
-    if (!valid(raw)) {
+    if (!valid(cleanRaw)) {
         showLoader(false);
         return;
     }
 
-    let src = manifest(raw);
+    // Cache token immediately from clean raw URL
+    let tokMatch = cleanRaw.match(/(edge-cache-token=[^&]+)/);
+    if (tokMatch) cachedToken = tokMatch[1];
+
+    let src = manifest(cleanRaw);
 
     if (Hls.isSupported()) {
         hls = new Hls({
@@ -164,12 +192,9 @@ function populateQualitySettings(hlsLevels) {
     if (!qList) return;
 
     let html = "";
-
-    // 1. Check if lecture has multiple server links (720p, 480p, 360p, 240p) in app.js
     const activeInfo = (typeof state !== "undefined" && state.activeKey && state.mediaMap) ? state.mediaMap[state.activeKey] : null;
     const serverQuals = activeInfo && activeInfo.qualities ? Object.keys(activeInfo.qualities) : [];
 
-    // 2. If HLS master manifest itself has multi-bitrate levels
     if (hlsLevels && hlsLevels.length > 1) {
         html += `<div class="q-option active" onclick="changeHlsLevel(-1, this)">Auto</div>`;
         hlsLevels.forEach((lvl, idx) => {
@@ -178,7 +203,7 @@ function populateQualitySettings(hlsLevels) {
         });
     } else if (serverQuals.length > 0) {
         serverQuals.forEach((qKey, idx) => {
-            const isAct = (input.value === activeInfo.qualities[qKey]) || idx === 0;
+            const isAct = (unwrapOriginalUrl(input.value) === unwrapOriginalUrl(activeInfo.qualities[qKey])) || idx === 0;
             html += `<div class="q-option ${isAct ? 'active' : ''}" onclick="switchServerQuality('${qKey.replace(/'/g, "")}', this)">${qKey}</div>`;
         });
     } else {
@@ -221,7 +246,7 @@ window.toggleSettingsMenu = function() {
 };
 
 async function downloadMerged() {
-    const raw = input ? input.value.trim() : "";
+    const raw = input ? unwrapOriginalUrl(input.value.trim()) : "";
     if (!valid(raw) || !hls || !hls.levels || hls.levels.length === 0) return;
 
     const box = document.getElementById("downloadBox");
@@ -237,13 +262,15 @@ async function downloadMerged() {
         let downloadedBuffers = [];
         let total = fragments.length;
         let match = raw.match(/(edge-cache-token=[^&]+)/);
-        let tokenStr = match ? match[1] : "";
+        let tokenStr = match ? match[1] : cachedToken;
 
         for (let i = 0; i < total; i++) {
             if (text) text.textContent = `Downloading: ${i + 1} / ${total} (${Math.round(((i + 1) / total) * 100)}%)`;
             let segUrl = fragments[i].url;
-            if (tokenStr && !segUrl.includes("edge-cache-token=")) segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
-            if (!segUrl.includes("workers.dev")) segUrl = SEGMENT + encodeURIComponent(segUrl);
+            if (!segUrl.includes("allswbatch22.workers.dev")) {
+                if (tokenStr && !segUrl.includes("edge-cache-token=")) segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
+                segUrl = SEGMENT + encodeURIComponent(segUrl);
+            }
             let segRes = await fetch(segUrl);
             if (!segRes.ok) throw new Error(`Segment ${i + 1} Error`);
             downloadedBuffers.push(await segRes.arrayBuffer());
