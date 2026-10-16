@@ -1,588 +1,417 @@
-/* =========================================================
-   RWA SKY PRO PORTAL — COMPLETE STYLESHEET (style.css)
-   Includes: Sky Glass UI, OTT Player, Fullscreen Clean Mode,
-   Profile Cards, Login UI & Kokila Hindi Font Support
-   ========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
 * {
     box-sizing: border-box;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    margin: 0;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #dbeafe 100%);
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
     color: #0f172a;
-    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
 }
 
-/* =========================================================
-   TOP SKY GLASS NAVBAR & NAVIGATION BUTTONS
-   ========================================================= */
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f0f9ff;
+}
+::-webkit-scrollbar-thumb {
+    background: #38bdf8;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #0284c7;
+}
+
+/* Sky Navbar Glassmorphism */
 .sky-nav {
     background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-bottom: 2px solid rgba(125, 211, 252, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 2px solid rgba(186, 230, 253, 0.7);
 }
 
-.btn-nav {
-    padding: 7px 13px;
-    border-radius: 12px;
-    font-weight: 800;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.12);
-}
-
-.btn-nav:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.06);
-}
-
-.btn-nav:active {
-    transform: translateY(0);
-}
-
-/* =========================================================
-   SLIDE PAGE TRANSITIONS
-   ========================================================= */
-.slide-page {
-    transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.hidden-slide {
-    display: none !important;
-}
-
-.active-slide {
-    display: block;
-    animation: fadeSlideIn 0.28s ease-out;
-}
-
-@keyframes fadeSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* =========================================================
-   HOME HUB CARDS (6 ATTRACTIVE GRADIENT CARDS)
-   ========================================================= */
-.hub-card {
-    position: relative;
-    border-radius: 26px;
-    padding: 26px;
-    color: #ffffff;
-    overflow: hidden;
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
-    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.hub-card:hover {
-    transform: translateY(-6px) scale(1.01);
-    box-shadow: 0 20px 38px rgba(15, 23, 42, 0.22);
-}
-
-.hub-paid {
-    background: linear-gradient(135deg, #0284c7 0%, #2563eb 60%, #1d4ed8 100%);
-}
-
-.hub-free {
-    background: linear-gradient(135deg, #059669 0%, #10b981 60%, #047857 100%);
-}
-
-.hub-paid-ts {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #4338ca 100%);
-}
-
-.hub-free-ts {
-    background: linear-gradient(135deg, #0d9488 0%, #0891b2 60%, #0f766e 100%);
-}
-
-.hub-token {
-    background: linear-gradient(135deg, #d97706 0%, #ea580c 60%, #b45309 100%);
-}
-
-.hub-profile {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #0369a1 100%);
-}
-
-.hub-icon {
-    font-size: 38px;
-    margin-bottom: 10px;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-}
-
-.hub-badge {
-    display: inline-block;
-    align-self: flex-start;
-    background: rgba(255, 255, 255, 0.22);
-    backdrop-filter: blur(6px);
-    padding: 4px 11px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 0.7px;
-}
-
-.hub-btn {
-    display: inline-block;
-    align-self: flex-start;
-    background: #ffffff;
-    color: #0f172a;
-    font-weight: 900;
-    font-size: 12px;
-    padding: 9px 16px;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* =========================================================
-   SKY CARDS, BANNERS & COURSE / LECTURE ITEMS
-   ========================================================= */
 .sky-banner {
-    background: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(12px);
-    border: 2px solid #7dd3fc;
-    border-radius: 24px;
-    padding: 16px 20px;
-    box-shadow: 0 10px 25px rgba(2, 132, 199, 0.1);
+    border: 2px solid rgba(186, 230, 253, 0.8);
+    border-radius: 1.5rem;
+    padding: 1.25rem;
+    box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.15);
 }
 
 .sky-card {
     background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(10px);
-    border: 2px solid #bae6fd;
-    border-radius: 22px;
-    box-shadow: 0 8px 22px rgba(2, 132, 199, 0.08);
-    transition: all 0.22s ease;
+    backdrop-filter: blur(12px);
+    border: 2px solid rgba(186, 230, 253, 0.8);
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 30px -10px rgba(56, 189, 248, 0.2);
+    transition: all 0.3s ease;
 }
 
 .sky-card:hover {
-    border-color: #38bdf8;
-    box-shadow: 0 12px 28px rgba(2, 132, 199, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px -5px rgba(56, 189, 248, 0.3);
 }
 
-/* Sub-Tabs Pills */
-.tab-pill {
-    padding: 9px 18px;
-    border-radius: 14px;
+/* Navigation Buttons */
+.btn-nav {
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
     font-weight: 800;
-    font-size: 13px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.btn-nav:hover {
+    transform: scale(1.03);
+}
+
+/* Hub Cards Grid Design */
+.hub-card {
+    border-radius: 1.75rem;
+    padding: 1.75rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 15px 35px -5px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+.hub-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -5px rgba(0,0,0,0.25);
+}
+.hub-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+.hub-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(4px);
+    border-radius: 2rem;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.hub-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    color: #0f172a;
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    font-weight: 800;
+    font-size: 0.75rem;
+}
+
+.hub-paid { background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); }
+.hub-free { background: linear-gradient(135deg, #0d9488 0%, #059669 100%); }
+.hub-paid-ts { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+.hub-free-ts { background: linear-gradient(135deg, #d97706 0%, #ea580c 100%); }
+.hub-token { background: linear-gradient(135deg, #db2777 0%, #e11d48 100%); }
+
+/* Slide Pages */
+.slide-page {
+    display: none;
+    animation: fadeInSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.slide-page.active-slide {
+    display: block;
+}
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Course Sub Tabs */
+.tab-pill {
+    padding: 0.5rem 1.25rem;
     background: rgba(255, 255, 255, 0.8);
-    color: #334155;
     border: 2px solid #bae6fd;
+    border-radius: 1.25rem;
+    font-weight: 800;
+    font-size: 0.75rem;
+    color: #0369a1;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s ease;
 }
-
-.tab-pill.active-pill {
-    background: linear-gradient(135deg, #0284c7, #2563eb);
-    color: #ffffff;
-    border-color: transparent;
-    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.28);
-}
-
-/* Action Buttons inside Cards */
-.btn-watch {
-    background: linear-gradient(135deg, #0284c7, #2563eb);
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 12px;
-    padding: 9px 15px;
-    border-radius: 13px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-}
-
-.btn-watch:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
+.tab-pill:hover, .tab-pill.active-pill {
+    background: #0284c7;
+    color: white;
+    border-color: #0284c7;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
 /* =========================================================
-   ASMANI SKY BLUE OTT VIDEO PLAYER
+   ASMANI SKY VIDEO PLAYER & FULLSCREEN ENHANCEMENTS
    ========================================================= */
 .player-sky-card {
-    background: linear-gradient(145deg, #e0f2fe 0%, #bae6fd 100%);
-    border: 3px solid #38bdf8;
-    border-radius: 26px;
-    padding: 16px;
-    box-shadow: 0 16px 36px rgba(2, 132, 199, 0.18);
-}
-
-.btn-close-player {
-    background: #e11d48;
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 12px;
-    padding: 7px 14px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(16px);
+    border: 2px solid #7dd3fc;
+    border-radius: 1.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 20px 45px -10px rgba(2, 132, 199, 0.25);
 }
 
 .screen {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #020617;
+    border-radius: 1.25rem;
     position: relative;
-    width: 100%;
-    background: #000000;
-    border-radius: 20px;
     overflow: hidden;
-    border: 2px solid #0284c7;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
-}
-
-#video {
-    width: 100%;
-    max-height: 70vh;
-    display: block;
-    background: #000000;
-    object-fit: contain;
-}
-
-/* Buffering Spinner Overlay */
-.buffer-overlay {
-    position: absolute;
-    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.35);
-    z-index: 25;
-    pointer-events: none;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
 
+.screen video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Buffer Loader Spinner */
+.buffer-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
 .spinner-ring {
-    width: 48px;
-    height: 48px;
-    border: 5px solid rgba(56, 189, 248, 0.3);
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(56, 189, 248, 0.3);
     border-top-color: #38bdf8;
-    border-radius: 50%;
-    animation: spinRing 0.8s linear infinite;
+    border-radius: 50xl;
+    animation: spinLoader 0.8s linear infinite;
+}
+@keyframes spinLoader {
+    to { transform: rotate(360deg); }
 }
 
-@keyframes spinRing {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* =========================================================
-   PLAYER CONTROLS BAR (NORMAL VIEW)
-   ========================================================= */
+/* Controls Bar */
 .controls {
-    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
-    padding: 12px 14px;
-    border-top: 2px solid #0284c7;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(2,6,23,0.95) 0%, rgba(2,6,23,0.75) 60%, transparent 100%);
+    padding: 1rem 1.25rem 0.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: opacity 0.3s ease;
+    z-index: 15;
 }
 
 .seek-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
+    gap: 0.75rem;
+    width: 100%;
 }
 
 .seek {
     flex: 1;
-    accent-color: #38bdf8;
     height: 6px;
-    border-radius: 999px;
+    appearance: none;
+    background: rgba(255,255,255,0.25);
+    border-radius: 3px;
+    outline: none;
     cursor: pointer;
+}
+.seek::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #38bdf8;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #38bdf8;
+    transition: transform 0.1s ease;
+}
+.seek::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
 }
 
 .time-inline {
-    color: #e0f2fe;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
-    font-variant-numeric: tabular-nums;
+    color: #e2e8f0;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .buttons-row {
     display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .ctrl-btn {
-    background: rgba(30, 41, 59, 0.9);
-    color: #f8fafc;
-    border: 1px solid #38bdf8;
-    padding: 7px 12px;
-    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 11px;
     font-weight: 800;
-    font-size: 12px;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: all 0.2s ease;
 }
-
 .ctrl-btn:hover {
-    background: #0284c7;
-    color: #ffffff;
+    background: #38bdf8;
+    color: #0f172a;
+    border-color: #38bdf8;
 }
 
 .play-main-btn {
-    background: #0284c7;
-    color: #ffffff;
-    padding: 7px 15px;
-}
-
-.pdf-btn-1 {
-    background: #059669;
-    border-color: #34d399;
-}
-
-.pdf-btn-2 {
-    background: #4f46e5;
-    border-color: #818cf8;
-}
-
-.dl-btn {
-    background: #d97706;
-    border-color: #fbbf24;
-}
-
-.sett-btn {
-    background: #334155;
-}
-
-/* =========================================================
-   FULLSCREEN CLEAN VIDEO MODE:
-   Hides all bottom buttons/controls when Fullscreen is active
-   and displays ONLY the Top-Left "⬅ Back" button!
-   ========================================================= */
-.fs-only-back-btn {
-    display: none;
-    position: absolute;
-    top: 18px;
-    left: 18px;
-    z-index: 9999;
-    background: rgba(15, 23, 42, 0.82);
-    backdrop-filter: blur(8px);
-    color: #ffffff;
-    border: 2px solid #38bdf8;
-    padding: 9px 18px;
-    border-radius: 14px;
-    font-weight: 900;
+    background: #38bdf8 !important;
+    color: #0f172a !important;
     font-size: 13px;
+    padding: 0.4rem 0.9rem;
+}
+
+.btn-close-player {
+    background: #e11d48;
+    color: white;
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.75rem;
+    font-weight: 800;
+    font-size: 11px;
+    border: 0;
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-    transition: opacity 0.3s ease, transform 0.2s ease;
 }
 
-.fs-only-back-btn:hover {
-    background: #0284c7;
-    transform: scale(1.04);
-}
-
-/* Triggered via Native Fullscreen OR Custom Fullscreen Class (.fullscreen-clean-active) */
-#hlsScreen:fullscreen,
-#hlsScreen:-webkit-full-screen,
-#ytScreen:fullscreen,
-#ytScreen:-webkit-full-screen,
-.screen.fullscreen-clean-active {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    border-radius: 0 !important;
-    border: none !important;
-    background: #000000 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-#hlsScreen:fullscreen #video,
-#hlsScreen:-webkit-full-screen #video,
-.screen.fullscreen-clean-active #video {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    object-fit: contain !important;
-}
-
-/* HIDE ALL CONTROLS & SETTINGS POPUP IN FULLSCREEN */
-#hlsScreen:fullscreen #playerControlsBar,
-#hlsScreen:-webkit-full-screen #playerControlsBar,
-.screen.fullscreen-clean-active #playerControlsBar,
-#hlsScreen:fullscreen #settingsMenu,
-#hlsScreen:-webkit-full-screen #settingsMenu,
-.screen.fullscreen-clean-active #settingsMenu {
-    display: none !important;
-}
-
-/* SHOW ONLY THE BACK BUTTON IN FULLSCREEN */
-#hlsScreen:fullscreen .fs-only-back-btn,
-#hlsScreen:-webkit-full-screen .fs-only-back-btn,
-#ytScreen:fullscreen .fs-only-back-btn,
-#ytScreen:-webkit-full-screen .fs-only-back-btn,
-.screen.fullscreen-clean-active .fs-only-back-btn {
-    display: inline-flex !important;
-    align-items: center;
-    gap: 6px;
-}
-
-/* Fallback CSS Fullscreen on Mobile Devices (iOS/Android WebView) */
-body.video-css-fullscreen-lock {
-    overflow: hidden !important;
-}
-
-body.video-css-fullscreen-lock .screen.fullscreen-clean-active {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 99999 !important;
-}
-
-/* =========================================================
-   COMPACT SETTINGS POPUP (QUALITY & SPEED)
-   ========================================================= */
+/* OTT Settings Popup */
 .ott-settings-popup {
-    display: none;
     position: absolute;
-    bottom: 86px;
-    right: 16px;
-    width: 250px;
-    background: rgba(15, 23, 42, 0.96);
+    bottom: 75px;
+    right: 15px;
+    background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(12px);
-    border: 2px solid #38bdf8;
-    border-radius: 18px;
-    padding: 14px;
-    color: #ffffff;
-    z-index: 40;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 1rem;
+    padding: 1rem;
+    width: 240px;
+    color: white;
+    z-index: 25;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
-
-.ott-settings-popup.show {
+.ott-settings-popup.active {
     display: block;
 }
-
 .sett-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: 900;
-    font-size: 13px;
-    padding-bottom: 8px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(56, 189, 248, 0.3);
-}
-
-.sett-close {
-    background: transparent;
-    color: #94a3b8;
-    border: none;
-    font-size: 15px;
-    font-weight: 900;
-    cursor: pointer;
-}
-
-.sett-title {
-    font-size: 11px;
     font-weight: 800;
-    color: #7dd3fc;
-    margin-bottom: 6px;
-    text-transform: uppercase;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
 }
-
+.sett-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+}
+.sett-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #38bdf8;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+}
 .sett-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
 }
-
-.q-option,
-.spd-option {
-    background: rgba(30, 41, 59, 0.9);
-    border: 1px solid #475569;
-    color: #e2e8f0;
-    padding: 5px 10px;
-    border-radius: 9px;
+.q-option, .spd-option {
+    padding: 3px 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
 }
-
-.q-option.active,
-.spd-option.active {
-    background: #0284c7;
-    border-color: #7dd3fc;
-    color: #ffffff;
+.q-option.active, .spd-option.active, .q-option:hover, .spd-option:hover {
+    background: #38bdf8;
+    color: #0f172a;
 }
 
 /* =========================================================
-   VIDEO DOWNLOAD PROGRESS BAR
+   ENHANCED FULLSCREEN MODE: HIDE ALL BUTTONS EXCEPT BACK BUTTON
    ========================================================= */
-.progressBox {
-    display: none;
-    margin-top: 12px;
-    background: #ffffff;
-    border: 2px solid #38bdf8;
-    border-radius: 14px;
-    padding: 10px 14px;
+.screen.fullscreen-mode {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    z-index: 99999 !important;
+    background: black !important;
 }
 
-.progressBox .bar {
+/* In fullscreen mode, hide controls bar and settings, or show only minimalistic back button */
+.screen.fullscreen-mode .controls .buttons-row .ctrl-btn:not(#fs):not(#toggle):not(#back),
+.screen.fullscreen-mode .ott-settings-popup {
+    display: none !important;
+}
+
+/* Download Progress */
+.progressBox {
+    margin-top: 1rem;
+    background: rgba(255,255,255,0.8);
+    border: 2px solid #bae6fd;
+    border-radius: 1rem;
+    padding: 0.75rem;
+    display: none;
+}
+.bar {
     width: 100%;
     height: 8px;
     background: #e0f2fe;
-    border-radius: 999px;
+    border-radius: 4px;
     overflow: hidden;
 }
-
-.progressBox .bar i {
+.bar i {
     display: block;
-    height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #0284c7, #10b981);
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #2563eb);
     transition: width 0.2s ease;
 }
 
-/* =========================================================
-   CBT TEST SERIES & KOKILA HINDI FONT RENDERING
-   ========================================================= */
+/* CBT Test Series Kokila Font Integration */
 .cbt-rich-text {
-    font-size: 16px;
-    line-height: 1.65;
-    font-weight: 600;
-    overflow-x: auto;
-}
-
-.cbt-rich-text img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 10px;
-    margin: 8px 0;
-}
-
-.kokila-hindi,
-font[face="kokila"],
-font[face="KOKILA"],
-span[style*="kokila"],
-span[style*="KOKILA"] {
-    font-family: 'KOKILA', 'Mangal', sans-serif !important;
-    font-size: 24px !important;
-    line-height: 1.45 !important;
+    font-family: 'KOKILA', 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.6;
 }
