@@ -237,7 +237,7 @@ body {
     box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
 }
 
-/* SCREEN & VIDEO STYLING */
+/* SCREEN & VIDEO CONTAINER */
 .screen {
     background: #000;
     border-radius: 20px;
@@ -258,7 +258,7 @@ video {
     background: #000;
 }
 
-/* FULLSCREEN STYLING FOR HLS SCREEN */
+/* TRUE FULLSCREEN STYLING */
 #hlsScreen:fullscreen {
     width: 100vw !important;
     height: 100vh !important;
@@ -303,16 +303,16 @@ video {
     to { transform: rotate(360deg); }
 }
 
-/* YOUTUBE-STYLE TRANSPARENT OVERLAY CONTROLS BAR */
+/* TRANSPARENT YOUTUBE-STYLE OVERLAY CONTROLS */
 .controls {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 12px 14px;
-    background: linear-gradient(180deg, rgba(224,242,254,0.05) 0%, rgba(186,230,253,0.92) 100%);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(125, 211, 252, 0.5);
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(2,132,199,0.85) 100%);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
     z-index: 25;
 }
 
@@ -320,25 +320,25 @@ video {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .seek {
     flex: 1;
-    height: 7px;
-    accent-color: #0284c7;
+    height: 6px;
+    accent-color: #38bdf8;
     cursor: pointer;
     border-radius: 99px;
 }
 
 .time-inline {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 900;
-    color: #0369a1;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid #7dd3fc;
-    padding: 3px 9px;
-    border-radius: 8px;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 2px 8px;
+    border-radius: 6px;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
@@ -347,37 +347,35 @@ video {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
 }
 
 .ctrl-btn {
-    background: rgba(255, 255, 255, 0.92);
-    color: #0f172a;
-    border: 1.5px solid #38bdf8;
-    border-radius: 12px;
-    padding: 7px 12px;
-    font-size: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 11px;
     font-weight: 800;
     cursor: pointer;
     transition: all 0.18s ease;
-    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
+    backdrop-filter: blur(4px);
 }
 
 .ctrl-btn:hover {
     background: #0284c7;
     color: #ffffff;
     border-color: #0284c7;
-    transform: translateY(-1px);
 }
 
 .play-main-btn {
     background: linear-gradient(135deg, #0284c7, #2563eb);
     color: #ffffff;
     border: 0;
-    padding: 7px 16px;
-    font-size: 14px;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    padding: 6px 14px;
+    font-size: 13px;
 }
 
 .sett-btn {
@@ -407,18 +405,18 @@ video {
 .ott-settings-popup {
     position: absolute;
     right: 12px;
-    bottom: 78px;
+    bottom: 72px;
     width: 215px;
     max-width: 85vw;
-    background: rgba(240, 249, 255, 0.97);
+    background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(14px);
-    border: 2px solid #0284c7;
+    border: 2px solid #38bdf8;
     border-radius: 16px;
     padding: 10px 12px;
     z-index: 30;
     display: none;
-    box-shadow: 0 12px 28px rgba(2, 132, 199, 0.35);
-    color: #0f172a;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    color: #ffffff;
 }
 
 .ott-settings-popup.show {
@@ -432,16 +430,16 @@ video {
     align-items: center;
     font-weight: 900;
     font-size: 12px;
-    color: #0369a1;
+    color: #38bdf8;
     padding-bottom: 6px;
-    border-bottom: 1px solid #bae6fd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     margin-bottom: 8px;
 }
 
 .sett-close {
     background: transparent;
     border: 0;
-    color: #e11d48;
+    color: #f43f5e;
     font-size: 13px;
     font-weight: 900;
     cursor: pointer;
@@ -451,7 +449,7 @@ video {
 .sett-title {
     font-size: 10px;
     font-weight: 900;
-    color: #0284c7;
+    color: #7dd3fc;
     margin-bottom: 5px;
     text-transform: uppercase;
 }
@@ -463,9 +461,9 @@ video {
 }
 
 .q-option, .spd-option {
-    background: #ffffff;
-    color: #0f172a;
-    border: 1px solid #7dd3fc;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 4px 9px;
     border-radius: 8px;
     font-size: 11px;
