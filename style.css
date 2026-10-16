@@ -5,17 +5,17 @@
 body {
     margin: 0;
     /* Asmani (Sky Blue) Vibrant Gradient Background */
-    background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 45%, #e0f2fe 100%);
+    background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 50%, #e0f2fe 100%);
     background-attachment: fixed;
     color: #0f172a;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
 }
 
 /* Navbar */
 .sky-nav {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(14px);
-    border-bottom: 2px solid rgba(56, 189, 248, 0.4);
+    border-bottom: 2px solid #38bdf8;
 }
 
 .btn-nav {
@@ -25,7 +25,7 @@ body {
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
 }
 
 .btn-nav:hover {
@@ -35,72 +35,80 @@ body {
 
 /* Slide Transitions */
 .slide-page {
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hidden-slide {
     display: none !important;
     opacity: 0;
-    transform: translateX(30px);
 }
 
 .active-slide {
     display: block !important;
     opacity: 1;
-    transform: translateX(0);
-    animation: slideInSmooth 0.35s ease forwards;
+    animation: slideInSmooth 0.3s ease forwards;
 }
 
 @keyframes slideInSmooth {
     from {
         opacity: 0;
-        transform: translateY(14px) scale(0.99);
+        transform: translateY(12px);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
     }
 }
 
-/* Home Hub 3 Big Attractive Cards */
+/* =========================================================
+   HOME HUB ATTRACTIVE CARDS (5 ZONES)
+   ========================================================= */
 .hub-card {
     border-radius: 26px;
-    padding: 28px 24px;
+    padding: 26px 22px;
     color: #fff;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 18px 35px -10px rgba(2, 132, 199, 0.35);
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    transition: all 0.28s ease;
+    box-shadow: 0 16px 32px -8px rgba(2, 132, 199, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.55);
 }
 
 .hub-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 25px 45px -10px rgba(2, 132, 199, 0.5);
+    transform: translateY(-6px) scale(1.015);
+    box-shadow: 0 22px 40px -8px rgba(2, 132, 199, 0.5);
 }
 
 .hub-paid {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #0284c7 100%);
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 60%, #1d4ed8 100%);
 }
 
 .hub-free {
-    background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0ea5e9 100%);
+    background: linear-gradient(135deg, #059669 0%, #0d9488 60%, #0284c7 100%);
+}
+
+.hub-paid-ts {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #9333ea 100%);
+}
+
+.hub-free-ts {
+    background: linear-gradient(135deg, #0891b2 0%, #0284c7 60%, #3b82f6 100%);
 }
 
 .hub-token {
-    background: linear-gradient(135deg, #d97706 0%, #ea580c 50%, #e11d48 100%);
+    background: linear-gradient(135deg, #ea580c 0%, #d97706 55%, #e11d48 100%);
 }
 
 .hub-icon {
-    font-size: 46px;
-    margin-bottom: 12px;
+    font-size: 42px;
+    margin-bottom: 10px;
     display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
-    width: 74px;
-    height: 74px;
-    line-height: 74px;
+    background: rgba(255, 255, 255, 0.22);
+    width: 68px;
+    height: 68px;
+    line-height: 68px;
     text-align: center;
-    border-radius: 22px;
+    border-radius: 20px;
     backdrop-filter: blur(6px);
 }
 
@@ -108,7 +116,7 @@ body {
     display: block;
     font-size: 10px;
     font-weight: 900;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     background: rgba(0, 0, 0, 0.25);
     padding: 4px 10px;
     border-radius: 99px;
@@ -119,21 +127,23 @@ body {
     background: #ffffff;
     color: #0f172a;
     font-weight: 900;
-    font-size: 13px;
-    padding: 11px 18px;
-    border-radius: 14px;
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: 12px;
     display: inline-block;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.15);
 }
 
-/* Sky Banner & Cards */
+/* =========================================================
+   SKY BANNERS & COURSE / TEST CARDS
+   ========================================================= */
 .sky-banner {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(12px);
-    border: 2px solid #fff;
+    border: 2px solid #ffffff;
     border-radius: 22px;
-    padding: 16px 20px;
-    box-shadow: 0 10px 25px rgba(2, 132, 199, 0.12);
+    padding: 15px 18px;
+    box-shadow: 0 10px 24px rgba(2, 132, 199, 0.14);
 }
 
 .sky-card {
@@ -141,33 +151,33 @@ body {
     backdrop-filter: blur(14px);
     border: 2px solid #ffffff;
     border-radius: 24px;
-    box-shadow: 0 14px 30px rgba(2, 132, 199, 0.15);
+    box-shadow: 0 12px 28px rgba(2, 132, 199, 0.15);
 }
 
 .grid-card {
-    background: rgba(255, 255, 255, 0.94);
-    border: 2px solid #ffffff;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #e0f2fe;
     border-radius: 22px;
-    transition: all 0.25s ease;
-    box-shadow: 0 10px 24px rgba(2, 132, 199, 0.12);
+    transition: all 0.22s ease;
+    box-shadow: 0 8px 22px rgba(2, 132, 199, 0.12);
     color: #0f172a;
 }
 
 .grid-card:hover {
-    transform: translateY(-6px);
+    transform: translateY(-5px);
     border-color: #0284c7;
-    box-shadow: 0 18px 35px rgba(2, 132, 199, 0.26);
+    box-shadow: 0 16px 32px rgba(2, 132, 199, 0.25);
 }
 
 /* Sub-tab Pills */
 .tab-pill {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.9);
     color: #0f172a;
     font-weight: 800;
     font-size: 12px;
-    padding: 10px 18px;
+    padding: 9px 16px;
     border-radius: 99px;
-    border: 2px solid #bae6fd;
+    border: 2px solid #7dd3fc;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s ease;
@@ -177,51 +187,56 @@ body {
     background: linear-gradient(135deg, #0284c7, #2563eb) !important;
     color: #fff !important;
     border-color: transparent !important;
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.32);
 }
 
 /* Action Buttons inside Cards */
 .btn-watch {
-    background: linear-gradient(135deg, #2563eb, #0284c7);
+    background: linear-gradient(135deg, #0284c7, #2563eb);
     color: #fff;
     font-weight: 800;
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 9px 14px;
     border: 0;
     cursor: pointer;
-    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+    transition: all 0.2s ease;
+}
+
+.btn-watch:hover {
+    filter: brightness(1.08);
 }
 
 .btn-pdf1 {
-    background: linear-gradient(135deg, #059669, #10b981);
+    background: linear-gradient(135deg, #ea580c, #f59e0b);
     color: #fff;
     font-weight: 800;
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 9px 13px;
     border: 0;
     cursor: pointer;
 }
 
 .btn-pdf2 {
-    background: linear-gradient(135deg, #d97706, #f59e0b);
+    background: linear-gradient(135deg, #db2777, #e11d48);
     color: #fff;
     font-weight: 800;
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 9px 13px;
     border: 0;
     cursor: pointer;
 }
 
 /* =========================================================
-   PREMIUM OTT PLAYER STYLING
+   ASMANI SKY BLUE PREMIUM OTT PLAYER STYLING
    ========================================================= */
-.player-glass-card {
-    background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-    border: 2px solid #38bdf8;
+.player-sky-card {
+    background: linear-gradient(145deg, #e0f2fe 0%, #bae6fd 55%, #7dd3fc 100%);
+    border: 3px solid #ffffff;
     border-radius: 26px;
-    padding: 18px;
-    box-shadow: 0 24px 50px rgba(2, 132, 199, 0.4);
-    color: #fff;
+    padding: 16px;
+    box-shadow: 0 20px 45px rgba(2, 132, 199, 0.35);
+    color: #0f172a;
 }
 
 .btn-close-player {
@@ -233,15 +248,15 @@ body {
     border-radius: 12px;
     border: 0;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
 }
 
 .screen {
     background: #000;
     border-radius: 20px;
     overflow: hidden;
-    border: 2px solid rgba(56, 189, 248, 0.35);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    border: 3px solid #38bdf8;
+    box-shadow: 0 10px 28px rgba(2, 132, 199, 0.3);
 }
 
 video {
@@ -252,11 +267,11 @@ video {
     aspect-ratio: 16 / 9;
 }
 
-/* Loading Spinner Overlay */
+/* Buffering Spinner Overlay */
 .buffer-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(6, 11, 25, 0.65);
+    background: rgba(14, 116, 144, 0.45);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -266,46 +281,47 @@ video {
 }
 
 .spinner-ring {
-    width: 54px;
-    height: 54px;
-    border: 5px solid rgba(56, 189, 248, 0.25);
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.35);
     border-top-color: #38bdf8;
     border-radius: 50%;
-    animation: spinLoader 0.8s linear infinite;
+    animation: spinLoader 0.75s linear infinite;
 }
 
 @keyframes spinLoader {
     to { transform: rotate(360deg); }
 }
 
-/* Player Controls Bar */
+/* Asmani Sky Controls Bar inside Player */
 .controls {
     padding: 12px 14px;
-    background: linear-gradient(180deg, #090d16 0%, #0f172a 100%);
-    border-top: 1px solid rgba(56, 189, 248, 0.2);
+    background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
+    border-top: 2px solid #7dd3fc;
 }
 
 /* Seek Bar + Timing on the exact same line */
 .seek-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 10px;
 }
 
 .seek {
     flex: 1;
-    height: 6px;
-    accent-color: #38bdf8;
+    height: 7px;
+    accent-color: #0284c7;
     cursor: pointer;
     border-radius: 99px;
 }
 
 .time-inline {
     font-size: 12px;
-    font-weight: 800;
-    color: #bae6fd;
-    background: rgba(56, 189, 248, 0.12);
+    font-weight: 900;
+    color: #0369a1;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #7dd3fc;
     padding: 3px 9px;
     border-radius: 8px;
     white-space: nowrap;
@@ -321,72 +337,81 @@ video {
 }
 
 .ctrl-btn {
-    background: #1e293b;
-    color: #f8fafc;
-    border: 1px solid rgba(56, 189, 248, 0.3);
+    background: #ffffff;
+    color: #0f172a;
+    border: 1.5px solid #38bdf8;
     border-radius: 12px;
-    padding: 8px 13px;
+    padding: 7px 12px;
     font-size: 12px;
     font-weight: 800;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
 }
 
 .ctrl-btn:hover {
     background: #0284c7;
-    border-color: #7dd3fc;
-    transform: translateY(-2px);
+    color: #ffffff;
+    border-color: #0284c7;
+    transform: translateY(-1px);
 }
 
 .play-main-btn {
     background: linear-gradient(135deg, #0284c7, #2563eb);
+    color: #ffffff;
     border: 0;
-    padding: 8px 16px;
+    padding: 7px 16px;
     font-size: 14px;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
 }
 
 .sett-btn {
     background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #ffffff;
     border: 0;
 }
 
 .dl-btn {
     background: linear-gradient(135deg, #059669, #0d9488);
+    color: #ffffff;
     border: 0;
 }
 
 .pdf-btn-1 {
     background: linear-gradient(135deg, #ea580c, #f59e0b);
-    color: #fff;
+    color: #ffffff;
     border: 0;
 }
 
 .pdf-btn-2 {
     background: linear-gradient(135deg, #db2777, #e11d48);
-    color: #fff;
+    color: #ffffff;
     border: 0;
 }
 
-/* Settings Popup (Quality + Speed) */
+/* =========================================================
+   COMPACT SETTINGS POPUP (Quality + Speed Only)
+   ========================================================= */
 .ott-settings-popup {
     position: absolute;
-    right: 16px;
-    bottom: 92px;
-    width: 270px;
-    background: rgba(15, 23, 42, 0.96);
-    backdrop-filter: blur(16px);
-    border: 2px solid #38bdf8;
-    border-radius: 18px;
-    padding: 14px;
+    right: 12px;
+    bottom: 88px;
+    width: 215px;
+    max-width: 85vw;
+    background: rgba(240, 249, 255, 0.97);
+    backdrop-filter: blur(14px);
+    border: 2px solid #0284c7;
+    border-radius: 16px;
+    padding: 10px 12px;
     z-index: 30;
     display: none;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 12px 28px rgba(2, 132, 199, 0.35);
+    color: #0f172a;
 }
 
 .ott-settings-popup.show {
     display: block;
-    animation: slideInSmooth 0.2s ease forwards;
+    animation: slideInSmooth 0.18s ease forwards;
 }
 
 .sett-header {
@@ -394,42 +419,43 @@ video {
     justify-content: space-between;
     align-items: center;
     font-weight: 900;
-    font-size: 13px;
-    color: #38bdf8;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(56, 189, 248, 0.25);
-    margin-bottom: 10px;
+    font-size: 12px;
+    color: #0369a1;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #bae6fd;
+    margin-bottom: 8px;
 }
 
 .sett-close {
     background: transparent;
     border: 0;
-    color: #f87171;
-    font-size: 14px;
+    color: #e11d48;
+    font-size: 13px;
     font-weight: 900;
     cursor: pointer;
+    padding: 0 4px;
 }
 
 .sett-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #94a3b8;
-    margin-bottom: 6px;
+    font-size: 10px;
+    font-weight: 900;
+    color: #0284c7;
+    margin-bottom: 5px;
     text-transform: uppercase;
 }
 
 .sett-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
 }
 
 .q-option, .spd-option {
-    background: #1e293b;
-    color: #e2e8f0;
-    border: 1px solid #334155;
-    padding: 5px 10px;
-    border-radius: 9px;
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #7dd3fc;
+    padding: 4px 9px;
+    border-radius: 8px;
     font-size: 11px;
     font-weight: 800;
     cursor: pointer;
@@ -437,19 +463,19 @@ video {
 }
 
 .q-option.active, .spd-option.active {
-    background: #0284c7;
-    color: #fff;
-    border-color: #7dd3fc;
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    color: #ffffff;
+    border-color: transparent;
 }
 
 /* Progress Bar for Download */
 .progressBox {
     display: none;
-    margin-top: 12px;
-    background: rgba(15, 23, 42, 0.8);
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.9);
     padding: 10px 14px;
     border-radius: 14px;
-    border: 1px solid rgba(56, 189, 248, 0.3);
+    border: 2px solid #38bdf8;
 }
 
 .progressBox.show {
@@ -458,7 +484,7 @@ video {
 
 .bar {
     height: 8px;
-    background: #1e293b;
+    background: #e0f2fe;
     border-radius: 99px;
     overflow: hidden;
 }
@@ -467,6 +493,94 @@ video {
     display: block;
     height: 100%;
     width: 0;
-    background: linear-gradient(90deg, #38bdf8, #2563eb);
+    background: linear-gradient(90deg, #0284c7, #2563eb);
     transition: width 0.2s ease;
+}
+
+/* =========================================================
+   CBT TEST SERIES & KOKILA HINDI FONT STYLING
+   ========================================================= */
+.cbt-rich-text {
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+}
+
+.cbt-rich-text img, .cbt-rich-text svg {
+    max-width: 100% !important;
+    height: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin: 4px 0;
+}
+
+.cbt-opt-btn {
+    width: 100%;
+    text-align: left;
+    background: #ffffff;
+    border: 2px solid #bae6fd;
+    border-radius: 14px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.cbt-opt-btn:hover {
+    border-color: #0284c7;
+    background: #f0f9ff;
+}
+
+.cbt-opt-selected {
+    border-color: #2563eb !important;
+    background: #dbeafe !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+}
+
+.cbt-opt-correct {
+    border-color: #059669 !important;
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+}
+
+.cbt-opt-wrong {
+    border-color: #e11d48 !important;
+    background: #ffe4e6 !important;
+    color: #9f1239 !important;
+}
+
+.pal-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-weight: 900;
+    font-size: 12px;
+    border: 2px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pal-btn.pal-active {
+    border-color: #0f172a;
+    transform: scale(1.06);
+}
+
+.pal-btn.pal-ans {
+    background: #10b981;
+    color: #fff;
+    border-color: #059669;
+}
+
+.pal-btn.pal-wrong {
+    background: #f43f5e;
+    color: #fff;
+    border-color: #e11d48;
 }
