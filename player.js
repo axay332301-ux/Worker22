@@ -269,8 +269,19 @@ window.toggleSettingsMenu = function() {
     if (menu) menu.classList.toggle("show");
 };
 
-if (v) {
-    v.addEventListener("click", () => {
+// TAP-TO-TOGGLE CONTROLS VISIBILITY LOGIC
+const hlsScreen = document.getElementById("hlsScreen");
+const playerControlsBar = document.getElementById("playerControlsBar");
+
+if (hlsScreen) {
+    hlsScreen.addEventListener("click", (e) => {
+        // Prevent toggle if clicking directly on buttons or settings menu
+        if (e.target.closest("button") || e.target.closest("input") || e.target.closest("#settingsMenu")) {
+            return;
+        }
+        if (playerControlsBar) {
+            playerControlsBar.classList.toggle("hidden-controls");
+        }
         const menu = document.getElementById("settingsMenu");
         if (menu && menu.classList.contains("show")) {
             menu.classList.remove("show");
@@ -380,14 +391,13 @@ if (pipBtn) pipBtn.onclick = async () => {
 
 // FULLSCREEN & MINIMIZE BUTTON LOGIC
 const fsBtn = document.getElementById("fs");
-const screenEl = document.getElementById("hlsScreen");
 const headerBar = document.getElementById("playerHeaderBar");
 
-if (fsBtn && screenEl) {
+if (fsBtn && hlsScreen) {
     fsBtn.onclick = async () => {
         try {
             if (!document.fullscreenElement) {
-                await screenEl.requestFullscreen();
+                await hlsScreen.requestFullscreen();
             } else {
                 await document.exitFullscreen();
             }
