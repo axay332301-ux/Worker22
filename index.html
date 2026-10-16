@@ -3,159 +3,328 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>RWA Pro Portal - Courses & Advanced HLS Player</title>
+    <title>RWA Pro OTT Portal - Sky Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Top Navbar -->
-    <nav class="bg-[#0b1017] border-b border-[#273142] sticky top-0 z-50 px-4 py-3">
-        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
-            <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchCategory(state.cat)">
-                <div class="w-9 h-9 rounded-xl bg-[#4777ff] flex items-center justify-center text-white font-extrabold text-lg">R</div>
+    <!-- Top Premium Navbar -->
+    <nav class="sky-nav sticky top-0 z-40 px-4 py-3 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="openSlide('home')">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-extrabold text-xl shadow-md">R</div>
                 <div>
-                    <div class="font-bold text-base leading-none text-white">RWA Course Portal</div>
-                    <div id="apiStatus" class="text-[11px] text-emerald-400 mt-0.5">● Ready</div>
+                    <div class="font-extrabold text-lg leading-none text-slate-800">RWA Sky Portal</div>
+                    <div id="apiStatus" class="text-[11px] font-semibold text-emerald-600 mt-0.5">● Live Server Connected</div>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="switchCategory('paid')" id="btnPaid" class="primary text-xs">🎓 Paid Batch</button>
-                <button onclick="switchCategory('free')" id="btnFree" class="text-xs">🆓 Free Batch</button>
-                <button onclick="openTestModal()" class="text-xs bg-indigo-600 border-0 font-bold">📝 Mock Test</button>
-                <button onclick="toggleModal('tokenModal')" class="text-xs">🔑 Token</button>
-                <button id="backBtn" onclick="goBack()" class="hidden text-xs bg-slate-700">⬅ Back</button>
+                <button onclick="openSlide('home')" class="btn-sky text-xs font-bold">🏠 Home</button>
+                <button onclick="openPaidBatchesSlide()" class="btn-gradient-blue text-xs font-bold">🎓 Paid Batches</button>
+                <button onclick="openFreeBatchesSlide()" class="btn-gradient-emerald text-xs font-bold">🆓 Free Batches</button>
+                <button onclick="openTestModal()" class="btn-gradient-purple text-xs font-bold">📝 Mock Test</button>
+                <button onclick="openTokenSlide()" class="btn-gradient-amber text-xs font-bold">🔑 Tokens</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl w-full mx-auto p-3 sm:p-5 flex-1">
+    <!-- Main Container with Smooth Slide Pages -->
+    <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 flex-1 relative overflow-x-hidden">
 
-        <!-- Player Section (Play Button Removed, Direct HLS Player) -->
-        <div id="playerSection" class="hidden mb-6">
-            <div class="card">
-                <div class="top">
-                    <div id="playingTitle" class="logo text-amber-400 truncate">▶ Advanced HLS Player</div>
-                    <div class="flex items-center gap-2">
-                        <select id="qualitySelect" onchange="changeLectureQuality(this.value)" class="hidden text-xs"></select>
-                        <button onclick="document.getElementById('playerSection').classList.add('hidden'); stopPlayer();" class="text-xs bg-red-600/30 border-red-500/40 text-red-300">✖ Close</button>
+        <!-- ==========================================
+             SLIDE 1: HOME DASHBOARD (3 BIG CARDS)
+             ========================================== -->
+        <section id="slide-home" class="slide-page active-slide">
+            <div class="text-center max-w-2xl mx-auto my-6">
+                <span class="px-3 py-1 rounded-full bg-sky-200/80 text-sky-800 text-xs font-extrabold uppercase tracking-wider">Welcome to New Generation Portal</span>
+                <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-800 mt-2">Choose Your Learning Zone</h1>
+                <p class="text-slate-600 text-sm mt-1">Sabhi Paid batches, Free classes aur Multi-Token management ab ek hi jagah smooth slide experience ke sath.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <!-- Card 1: Paid Batches -->
+                <div onclick="openPaidBatchesSlide()" class="hero-card card-paid cursor-pointer">
+                    <div class="hero-icon bg-blue-600 text-white">🎓</div>
+                    <span class="badge-pill bg-blue-100 text-blue-700">MULTI-TOKEN SYNC</span>
+                    <h2 class="text-2xl font-extrabold text-slate-800 mt-3">Paid Batches</h2>
+                    <p class="text-slate-600 text-sm mt-2">Jitne bhi tokens aapne add kiye hain, un sabhi ke purchased batches aur classes ek sath dekhein.</p>
+                    <div class="mt-6 flex items-center justify-between text-blue-600 font-extrabold text-sm">
+                        <span>Explore Paid Courses</span>
+                        <span class="text-lg">➔</span>
                     </div>
                 </div>
 
-                <!-- Hidden URL Input -->
-                <div class="form mb-3" style="display:none;">
-                    <input id="url" placeholder="URL">
-                    <button id="load">PLAY</button>
+                <!-- Card 2: Free Batches -->
+                <div onclick="openFreeBatchesSlide()" class="hero-card card-free cursor-pointer">
+                    <div class="hero-icon bg-emerald-500 text-white">🆓</div>
+                    <span class="badge-pill bg-emerald-100 text-emerald-700">100% FREE ACCESS</span>
+                    <h2 class="text-2xl font-extrabold text-slate-800 mt-3">Free Batches</h2>
+                    <p class="text-slate-600 text-sm mt-2">Sabhi exams ke free YouTube classes, marathon sessions aur free PDF notes yahan se padhein.</p>
+                    <div class="mt-6 flex items-center justify-between text-emerald-600 font-extrabold text-sm">
+                        <span>Open Free Classes</span>
+                        <span class="text-lg">➔</span>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Card 3: Tokens Manager -->
+                <div onclick="openTokenSlide()" class="hero-card card-token cursor-pointer">
+                    <div class="hero-icon bg-amber-500 text-white">🔑</div>
+                    <span class="badge-pill bg-amber-100 text-amber-800" id="homeTokenCount">1 TOKEN ACTIVE</span>
+                    <h2 class="text-2xl font-extrabold text-slate-800 mt-3">Manage Tokens</h2>
+                    <p class="text-slate-600 text-sm mt-2">Naye Authorization Tokens ya Batch IDs add karein taaki sabhi accounts ke batches ek sath dikhein.</p>
+                    <div class="mt-6 flex items-center justify-between text-amber-600 font-extrabold text-sm">
+                        <span>Configure Tokens</span>
+                        <span class="text-lg">➔</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SLIDE 2: COURSES / SUBJECTS / LECTURES LIST
+             ========================================== -->
+        <section id="slide-browser" class="slide-page hidden">
+            <!-- Top Navigation Header inside Slide -->
+            <div class="sky-card p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <button id="backBtn" onclick="goBack()" class="btn-back">⬅ Back</button>
+                    <div>
+                        <p id="crumbText" class="text-[11px] text-sky-600 font-extrabold uppercase tracking-wider">Dashboard</p>
+                        <h2 id="headingText" class="text-xl sm:text-2xl font-extrabold text-slate-800">All Courses</h2>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search batch, subject or video..." 
+                           class="w-full sm:w-64 bg-white border border-sky-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-800 shadow-inner outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Course Sub-Tabs -->
+            <div id="subTabs" class="hidden flex gap-2 mb-5 pb-2 overflow-x-auto">
+                <button onclick="loadCourseTab('subjects')" id="sub_subjects" class="btn-gradient-blue text-xs font-bold">📚 Subjects</button>
+                <button onclick="loadCourseTab('live')" id="sub_live" class="btn-sky text-xs font-bold">🔴 Live & Upcoming</button>
+                <button onclick="loadCourseTab('tests')" id="sub_tests" class="btn-sky text-xs font-bold">📝 Test Series</button>
+                <button onclick="loadCourseTab('telegram')" id="sub_telegram" class="btn-sky text-xs font-bold">✈️ Doubt Group</button>
+            </div>
+
+            <!-- Dynamic Content Grid -->
+            <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </section>
+
+        <!-- ==========================================
+             SLIDE 3: DEDICATED PREMIUM VIDEO PLAYER SLIDE
+             ========================================== -->
+        <section id="slide-player" class="slide-page hidden">
+            <div class="sky-card p-4 sm:p-5">
+                <!-- Player Header -->
+                <div class="flex justify-between items-center gap-2 mb-4 pb-3 border-b border-sky-100">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <button onclick="closePlayerBox()" class="btn-back">⬅ Back</button>
+                        <div id="playingTitle" class="font-extrabold text-base sm:text-lg text-slate-800 truncate">▶ Playing Lecture</div>
+                    </div>
+                    <button id="closePlayerBtn" onclick="closePlayerBox()" class="btn-danger text-xs font-bold">✖ Close</button>
+                </div>
+
+                <!-- Hidden URL input for internal engine -->
+                <input id="url" type="hidden">
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <!-- Video Screen & Controls -->
                     <div class="lg:col-span-2">
                         <!-- HLS HTML5 Video Screen -->
-                        <div id="hlsScreen" class="screen">
+                        <div id="hlsScreen" class="player-screen relative">
+                            <!-- Loading Spinner Overlay -->
+                            <div id="videoLoader" class="video-loader hidden">
+                                <div class="spinner"></div>
+                                <span>Loading Stream...</span>
+                            </div>
+
                             <video id="video" playsinline preload="metadata"></video>
-                            <div class="controls">
-                                <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
-                                <div class="buttons">
-                                    <button id="back">↶ 10s</button>
-                                    <button id="toggle">▶</button>
-                                    <button id="next">10s ↷</button>
-                                    <button id="mute">🔊</button>
-                                    <span id="time" class="time">00:00 / 00:00</span>
-                                    <span class="grow"></span>
-                                    <select id="speed">
-                                        <option>.5</option><option>.75</option><option selected>1</option>
-                                        <option>1.25</option><option>1.5</option><option>2</option>
-                                    </select>
-                                    <button id="pip">PiP</button>
-                                    <button id="download">⬇ Download</button>
-                                    <button id="fs">⛶</button>
+
+                            <!-- Settings Popup Menu (Quality + Speed Inside) -->
+                            <div id="settingsMenu" class="ott-settings-popup">
+                                <div class="sett-header">
+                                    <span>⚙️ Player Settings</span>
+                                    <button onclick="toggleSettingsMenu()" class="text-slate-400 hover:text-white text-xs px-1.5 py-0.5">✕</button>
+                                </div>
+                                <div class="sett-section">
+                                    <div class="sett-title">Video Quality</div>
+                                    <div id="qualityList" class="sett-options">
+                                        <div class="q-option active">Auto</div>
+                                    </div>
+                                </div>
+                                <div class="sett-section mt-3">
+                                    <div class="sett-title">Playback Speed</div>
+                                    <div class="sett-options">
+                                        <div class="spd-option" onclick="changeSpd(0.5, this)">0.5x</div>
+                                        <div class="spd-option" onclick="changeSpd(0.75, this)">0.75x</div>
+                                        <div class="spd-option active" onclick="changeSpd(1, this)">1.0x</div>
+                                        <div class="spd-option" onclick="changeSpd(1.25, this)">1.25x</div>
+                                        <div class="spd-option" onclick="changeSpd(1.5, this)">1.5x</div>
+                                        <div class="spd-option" onclick="changeSpd(2, this)">2.0x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sleek OTT Bottom Controls -->
+                            <div class="controls-bar">
+                                <!-- Seek Bar + Inline Timing in Same Row -->
+                                <div class="seek-row">
+                                    <input id="seek" class="seek-slider" type="range" min="0" max="1000" value="0">
+                                    <span id="time" class="time-badge">00:00 / 00:00</span>
+                                </div>
+
+                                <!-- Action Buttons Row -->
+                                <div class="control-buttons">
+                                    <div class="flex items-center gap-2">
+                                        <button id="back" class="ctrl-btn" title="10s Back">⏪ 10s</button>
+                                        <button id="toggle" class="ctrl-btn play-main">▶</button>
+                                        <button id="next" class="ctrl-btn" title="10s Forward">10s ⏩</button>
+                                        <button id="mute" class="ctrl-btn">🔊</button>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <button onclick="toggleSettingsMenu()" class="ctrl-btn settings-btn">⚙️ Quality & Speed</button>
+                                        <button id="pip" class="ctrl-btn">📺 PiP</button>
+                                        <button id="download" class="ctrl-btn dl-btn">⬇ Download</button>
+                                        <button id="fs" class="ctrl-btn">⛶</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="msg" class="msg"></div>
-                        <div id="downloadBox" class="progressBox">
-                            <div id="downloadText" class="msg">Preparing…</div>
-                            <div class="bar"><i id="bar"></i></div>
+                        <!-- YouTube Embed Screen (For Free Classes) -->
+                        <div id="ytScreen" class="player-screen hidden aspect-video">
+                            <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+
+                        <!-- Lecture Linked PDF Buttons Bar -->
+                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-sky-50 border border-sky-200 p-3 rounded-xl">
+                            <div class="text-xs font-bold text-slate-700">📚 Class Attachments & Notes:</div>
+                            <div class="flex items-center gap-2.5">
+                                <button id="playerPdf1" class="btn-gradient-blue text-xs font-bold hidden">📄 Open PDF 1</button>
+                                <button id="playerPdf2" class="btn-gradient-purple text-xs font-bold hidden">📄 Open PDF 2</button>
+                                <span id="noPdfMsg" class="text-xs text-slate-400 italic">No PDF attached with this video</span>
+                            </div>
+                        </div>
+
+                        <!-- Error message (Only visible if error occurs) -->
+                        <div id="msg" class="text-xs font-semibold mt-2 hidden"></div>
+
+                        <!-- Download Progress Box -->
+                        <div id="downloadBox" class="progressBox bg-white p-3 rounded-xl border border-sky-200 mt-3">
+                            <div id="downloadText" class="text-xs font-bold text-slate-700">Preparing download…</div>
+                            <div class="bar mt-2"><i id="bar"></i></div>
                         </div>
                     </div>
 
-                    <!-- Recorded Class Comments -->
-                    <div class="bg-[#0b1017] border border-[#273142] rounded-xl flex flex-col h-80 lg:h-auto">
-                        <div class="p-3 border-b border-[#273142] flex justify-between items-center text-xs">
-                            <span class="font-bold text-slate-300">💬 Recorded Comments</span>
-                            <span id="commentCount" class="bg-[#192332] text-amber-400 px-2 py-0.5 rounded">0</span>
+                    <!-- Recorded Class Comments / Notes Box -->
+                    <div class="bg-white border border-sky-200 rounded-2xl flex flex-col h-80 lg:h-auto shadow-sm overflow-hidden">
+                        <div class="p-3.5 bg-sky-50 border-b border-sky-200 flex justify-between items-center text-xs">
+                            <span class="font-extrabold text-slate-700">💬 Class Discussion & Doubts</span>
+                            <span id="commentCount" class="bg-blue-600 text-white font-bold px-2 py-0.5 rounded-full">1</span>
                         </div>
-                        <div id="commentList" class="flex-1 p-3 overflow-y-auto space-y-2.5 text-xs"></div>
-                        <div class="p-2 border-t border-[#273142] flex gap-1.5">
-                            <input id="commentInput" type="text" placeholder="Doubt लिखें..." class="flex-1 bg-[#080d14] border border-[#303b4d] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
-                            <button onclick="postComment()" class="primary text-xs">Send</button>
+                        <div id="commentList" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 text-xs text-slate-700"></div>
+                        <div class="p-2.5 bg-sky-50 border-t border-sky-200 flex gap-2">
+                            <input id="commentInput" type="text" placeholder="Apna doubt ya note likhein..." class="flex-1 bg-white border border-sky-300 rounded-xl px-3 py-2 text-xs text-slate-800 outline-none">
+                            <button onclick="postComment()" class="btn-gradient-blue text-xs font-bold">Send</button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- In-App PDF Viewer Box -->
-        <div id="pdfBox" class="hidden mb-6 card">
-            <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-                <h3 id="pdfTitle" class="font-bold text-emerald-400 text-sm truncate">📄 PDF Viewer</h3>
-                <div class="flex items-center gap-2">
-                    <button onclick="setPdfMode('appx')" class="text-xs">AppX Viewer</button>
-                    <button onclick="setPdfMode('gdocs')" class="text-xs">Google Viewer</button>
-                    <a id="rawPdfLink" href="#" target="_blank" class="primary text-xs px-3 py-2 rounded-lg no-underline">📥 Direct Open</a>
-                    <button onclick="closePdfBox()" class="text-xs bg-red-600/30 text-red-300">✖</button>
+        <!-- ==========================================
+             SLIDE 4: IN-APP PDF VIEWER SLIDE
+             ========================================== -->
+        <section id="slide-pdf" class="slide-page hidden">
+            <div class="sky-card p-4">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-3 border-b border-sky-100">
+                    <div class="flex items-center gap-2">
+                        <button onclick="closePdfBox()" class="btn-back">⬅ Back</button>
+                        <h3 id="pdfTitle" class="font-extrabold text-slate-800 text-sm sm:text-base truncate">📄 Class Notes PDF</h3>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="setPdfMode('appx')" class="btn-sky text-xs font-bold">AppX Viewer</button>
+                        <button onclick="setPdfMode('gdocs')" class="btn-sky text-xs font-bold">Google Viewer</button>
+                        <a id="rawPdfLink" href="#" target="_blank" class="btn-gradient-emerald text-xs font-bold no-underline">📥 Download PDF</a>
+                        <button onclick="closePdfBox()" class="btn-danger text-xs font-bold">✖ Close</button>
+                    </div>
+                </div>
+                <iframe id="pdfFrame" class="w-full h-[78vh] bg-slate-900 rounded-xl border border-sky-200" src="" frameborder="0"></iframe>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SLIDE 5: MULTI-TOKEN MANAGER SLIDE
+             ========================================== -->
+        <section id="slide-tokens" class="slide-page hidden">
+            <div class="sky-card p-5 max-w-3xl mx-auto">
+                <div class="flex justify-between items-center pb-4 border-b border-sky-200">
+                    <div class="flex items-center gap-3">
+                        <button onclick="openSlide('home')" class="btn-back">⬅ Back</button>
+                        <div>
+                            <h3 class="font-extrabold text-xl text-slate-800">🔑 Multi-Token & Batch Manager</h3>
+                            <p class="text-xs text-slate-500">Jitne bhi tokens yahan add honge, Paid Batches mein un sabhi ke courses ek sath dikhenge.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add New Token Form -->
+                <div class="bg-sky-50 border border-sky-200 rounded-2xl p-4 mt-4 space-y-3">
+                    <h4 class="font-bold text-sm text-sky-900">➕ Add New Account Token / Batch ID</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="font-bold text-slate-700">Account Label (e.g. Account 1)</label>
+                            <input id="cfgLabel" type="text" placeholder="My RWA Account" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-slate-800 mt-1">
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700">User-ID</label>
+                            <input id="cfgUserId" type="text" placeholder="e.g. 4756316" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-slate-800 mt-1">
+                        </div>
+                    </div>
+                    <div class="text-xs">
+                        <label class="font-bold text-slate-700">Batch IDs (Comma separated, e.g. 571, 610, 480)</label>
+                        <input id="cfgCourseIds" type="text" placeholder="571" class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-slate-800 mt-1">
+                    </div>
+                    <div class="text-xs">
+                        <label class="font-bold text-slate-700">Authorization Token (JWT)</label>
+                        <textarea id="cfgToken" rows="3" placeholder="Paste eyJ0eXAiOiJKV1Qi..." class="w-full bg-white border border-sky-300 rounded-xl p-2.5 text-slate-800 mt-1 font-mono"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button onclick="addNewTokenEntry()" class="btn-gradient-blue text-xs font-bold">💾 Save & Add Token</button>
+                    </div>
+                </div>
+
+                <!-- Saved Tokens List -->
+                <div class="mt-6">
+                    <h4 class="font-extrabold text-sm text-slate-700 mb-3">📋 Active Saved Tokens:</h4>
+                    <div id="tokenListContainer" class="space-y-2.5"></div>
                 </div>
             </div>
-            <iframe id="pdfFrame" class="w-full h-[75vh] bg-black rounded-xl" src="" frameborder="0"></iframe>
-        </div>
-
-        <!-- Breadcrumb & Search -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-                <p id="crumbText" class="text-xs text-amber-400 font-bold uppercase">Dashboard</p>
-                <h2 id="headingText" class="text-xl sm:text-2xl font-bold">All Courses</h2>
-            </div>
-            <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search subject, topic..." 
-                   class="w-full sm:w-64 bg-[#101620] border border-[#273142] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none">
-        </div>
-
-        <!-- Course Sub-Tabs -->
-        <div id="subTabs" class="hidden flex gap-2 mb-5 border-b border-[#273142] pb-3 overflow-x-auto">
-            <button onclick="loadCourseTab('subjects')" id="sub_subjects" class="primary text-xs">📚 Subjects</button>
-            <button onclick="loadCourseTab('live')" id="sub_live" class="text-xs">🔴 Live & Upcoming</button>
-            <button onclick="loadCourseTab('tests')" id="sub_tests" class="text-xs">📝 Test Series</button>
-            <button onclick="loadCourseTab('telegram')" id="sub_telegram" class="text-xs">✈️ Doubt Group</button>
-        </div>
-
-        <!-- Cards Grid -->
-        <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
 
     </main>
 
-    <!-- Token Modal -->
-    <div id="tokenModal" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
-        <div class="card max-w-md w-full">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-amber-400">🔑 Token & API Settings</h3>
-                <button onclick="toggleModal('tokenModal')" class="text-xs">✖</button>
-            </div>
-            <div class="space-y-3 text-xs">
+    <!-- Mock Test Modal -->
+    <div id="testModal" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="sky-card max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden p-5">
+            <div class="flex justify-between items-center pb-3 border-b border-sky-200">
                 <div>
-                    <label class="text-slate-300">User-ID</label>
-                    <input id="cfgUserId" type="text" class="w-full bg-[#080d14] border border-[#303b4d] rounded-lg p-2.5 text-white mt-1">
+                    <span class="text-[10px] text-blue-600 font-extrabold">TEST SERIES #700 • TEST #40186</span>
+                    <h3 class="font-extrabold text-lg text-slate-800">Polity & GS - Live Mock Test</h3>
                 </div>
-                <div>
-                    <label class="text-slate-300">Authorization Token</label>
-                    <textarea id="cfgToken" rows="4" class="w-full bg-[#080d14] border border-[#303b4d] rounded-lg p-2.5 text-white mt-1 font-mono"></textarea>
-                </div>
+                <button onclick="toggleModal('testModal')" class="btn-danger text-xs font-bold">✖ Close</button>
             </div>
-            <div class="flex justify-end mt-4">
-                <button onclick="saveConfig()" class="primary text-xs">Save & Reload</button>
+            <div id="quizContainer" class="py-4 overflow-y-auto space-y-4 flex-1"></div>
+            <div class="pt-3 border-t border-sky-200 flex justify-between items-center">
+                <span id="quizScoreText" class="font-extrabold text-blue-700 text-sm">Score: 0 / 5</span>
+                <button onclick="renderQuiz()" class="btn-gradient-blue text-xs font-bold">🔄 Re-Attempt</button>
             </div>
         </div>
     </div>
