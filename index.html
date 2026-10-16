@@ -124,7 +124,7 @@
             <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </section>
 
-        <!-- SLIDE 3: PLAYER SECTION -->
+        <!-- SLIDE 3: PLAYER SECTION WITH 90% TRANSPARENT ICON CONTROLS -->
         <section id="slidePlayer" class="slide-page hidden-slide">
             <div class="player-sky-card max-w-5xl mx-auto">
                 <div id="playerHeaderBar" class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-3 border-b-2 border-sky-300/70">
@@ -140,7 +140,6 @@
                 <input id="url" type="hidden" value="">
 
                 <div class="w-full">
-                    <!-- Video Screen with Transparent Overlay Controls -->
                     <div id="hlsScreen" class="screen relative">
                         <div id="bufferLoader" class="buffer-overlay hidden">
                             <div class="spinner-ring"></div>
@@ -172,7 +171,7 @@
                             </div>
                         </div>
 
-                        <!-- Transparent Coaching-App Style Overlay Controls -->
+                        <!-- Transparent Icon-Only Overlay Controls -->
                         <div id="playerControlsBar" class="controls">
                             <div class="seek-row">
                                 <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
@@ -181,19 +180,19 @@
 
                             <div class="buttons-row">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <button id="back" class="ctrl-btn" title="10s Back">⏪ 10s</button>
-                                    <button id="toggle" class="ctrl-btn play-main-btn" title="Play/Pause">⏸</button>
-                                    <button id="next" class="ctrl-btn" title="10s Forward">10s ⏩</button>
-                                    <button id="mute" class="ctrl-btn" title="Mute/Unmute">🔊</button>
+                                    <button id="back" class="ctrl-icon-btn" title="10s Back">⏪</button>
+                                    <button id="toggle" class="ctrl-icon-btn play-main-icon" title="Play/Pause">⏸</button>
+                                    <button id="next" class="ctrl-icon-btn" title="10s Forward">⏩</button>
+                                    <button id="mute" class="ctrl-icon-btn" title="Mute/Unmute">🔊</button>
                                 </div>
 
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-btn pdf-btn-1 hidden">📄 PDF 1</button>
-                                    <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-btn pdf-btn-2 hidden">📄 PDF 2</button>
-                                    <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
-                                    <button id="download" class="ctrl-btn dl-btn" title="Download Video">⬇ Save</button>
-                                    <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
-                                    <button id="fs" class="ctrl-btn" title="Fullscreen">⛶ Full</button>
+                                    <button id="playerPdf1" onclick="openActivePlayerPdf(1)" class="ctrl-icon-btn pdf-icon-1 hidden" title="PDF 1">📄1</button>
+                                    <button id="playerPdf2" onclick="openActivePlayerPdf(2)" class="ctrl-icon-btn pdf-icon-2 hidden" title="PDF 2">📄2</button>
+                                    <button id="pip" class="ctrl-icon-btn" title="PiP">🖼️</button>
+                                    <button id="download" class="ctrl-icon-btn dl-icon" title="Download">⬇</button>
+                                    <button onclick="toggleSettingsMenu()" class="ctrl-icon-btn sett-icon" title="Settings">⚙️</button>
+                                    <button id="fs" class="ctrl-icon-btn" title="Fullscreen">⛶</button>
                                 </div>
                             </div>
                         </div>
