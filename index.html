@@ -26,7 +26,6 @@
                 <button onclick="switchCategory('paid')" id="btnPaid" class="primary text-xs">🎓 Paid Batch</button>
                 <button onclick="switchCategory('free')" id="btnFree" class="text-xs">🆓 Free Batch</button>
                 <button onclick="openTestModal()" class="text-xs bg-indigo-600 border-0 font-bold">📝 Mock Test</button>
-                <button onclick="togglePlayerBox()" class="text-xs bg-amber-500 text-black border-0 font-bold">▶ Player</button>
                 <button onclick="toggleModal('tokenModal')" class="text-xs">🔑 Token</button>
                 <button id="backBtn" onclick="goBack()" class="hidden text-xs bg-slate-700">⬅ Back</button>
             </div>
@@ -36,26 +35,24 @@
     <!-- Main Content -->
     <main class="max-w-7xl w-full mx-auto p-3 sm:p-5 flex-1">
 
-        <!-- RWA Advanced HLS Player + YouTube + Comments Section -->
+        <!-- Player Section (Play Button Removed, Direct HLS Player) -->
         <div id="playerSection" class="hidden mb-6">
             <div class="card">
                 <div class="top">
                     <div id="playingTitle" class="logo text-amber-400 truncate">▶ Advanced HLS Player</div>
                     <div class="flex items-center gap-2">
                         <select id="qualitySelect" onchange="changeLectureQuality(this.value)" class="hidden text-xs"></select>
-                        <div id="status" class="status">Ready</div>
-                        <button onclick="closePlayerBox()" class="text-xs bg-red-600/30 border-red-500/40 text-red-300">✖ Close</button>
+                        <button onclick="document.getElementById('playerSection').classList.add('hidden'); stopPlayer();" class="text-xs bg-red-600/30 border-red-500/40 text-red-300">✖ Close</button>
                     </div>
                 </div>
 
-                <!-- Custom URL Input & Play Bar -->
-                <div class="form mb-3">
-                    <input id="url" placeholder="Authorized HLS / Proxy .m3u8 URL paste करें या नीचे क्लास पर क्लिक करें">
-                    <button id="load" class="primary">PLAY</button>
+                <!-- Hidden URL Input -->
+                <div class="form mb-3" style="display:none;">
+                    <input id="url" placeholder="URL">
+                    <button id="load">PLAY</button>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <!-- Video Screen & Controls -->
                     <div class="lg:col-span-2">
                         <!-- HLS HTML5 Video Screen -->
                         <div id="hlsScreen" class="screen">
@@ -70,14 +67,8 @@
                                     <span id="time" class="time">00:00 / 00:00</span>
                                     <span class="grow"></span>
                                     <select id="speed">
-                                        <option>.5</option>
-                                        <option>.75</option>
-                                        <option selected>1</option>
-                                        <option>1.25</option>
-                                        <option>1.5</option>
-                                        <option>2</option>
-                                        <option>3</option>
-                                        <option>4</option>
+                                        <option>.5</option><option>.75</option><option selected>1</option>
+                                        <option>1.25</option><option>1.5</option><option>2</option>
                                     </select>
                                     <button id="pip">PiP</button>
                                     <button id="download">⬇ Download</button>
@@ -86,12 +77,7 @@
                             </div>
                         </div>
 
-                        <!-- YouTube Embed Screen (For Free Classes) -->
-                        <div id="ytScreen" class="screen hidden aspect-video">
-                            <iframe id="ytFrame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-
-                        <div id="msg" class="msg">URL डालकर PLAY दबाएँ या नीचे किसी क्लास के Watch बटन पर क्लिक करें।</div>
+                        <div id="msg" class="msg"></div>
                         <div id="downloadBox" class="progressBox">
                             <div id="downloadText" class="msg">Preparing…</div>
                             <div class="bar"><i id="bar"></i></div>
@@ -106,7 +92,7 @@
                         </div>
                         <div id="commentList" class="flex-1 p-3 overflow-y-auto space-y-2.5 text-xs"></div>
                         <div class="p-2 border-t border-[#273142] flex gap-1.5">
-                            <input id="commentInput" type="text" placeholder="Doubt या comment लिखें..." class="flex-1 bg-[#080d14] border border-[#303b4d] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                            <input id="commentInput" type="text" placeholder="Doubt लिखें..." class="flex-1 bg-[#080d14] border border-[#303b4d] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
                             <button onclick="postComment()" class="primary text-xs">Send</button>
                         </div>
                     </div>
@@ -134,7 +120,7 @@
                 <p id="crumbText" class="text-xs text-amber-400 font-bold uppercase">Dashboard</p>
                 <h2 id="headingText" class="text-xl sm:text-2xl font-bold">All Courses</h2>
             </div>
-            <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search subject, topic or video..." 
+            <input type="text" id="searchBox" oninput="filterGrid()" placeholder="🔍 Search subject, topic..." 
                    class="w-full sm:w-64 bg-[#101620] border border-[#273142] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none">
         </div>
 
@@ -150,24 +136,6 @@
         <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
     </main>
-
-    <!-- Mock Test Modal -->
-    <div id="testModal" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-3">
-        <div class="card max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div class="flex justify-between items-center pb-3 border-b border-[#273142]">
-                <div>
-                    <span class="text-[10px] text-amber-400 font-bold">TEST SERIES #700 • TEST #40186</span>
-                    <h3 class="font-bold text-base">Polity 01 - Mock Test</h3>
-                </div>
-                <button onclick="toggleModal('testModal')" class="text-xs">✖ Close</button>
-            </div>
-            <div id="quizContainer" class="py-4 overflow-y-auto space-y-4 flex-1"></div>
-            <div class="pt-3 border-t border-[#273142] flex justify-between items-center">
-                <span id="quizScoreText" class="font-bold text-amber-400 text-sm">Score: 0 / 10</span>
-                <button onclick="renderQuiz()" class="primary text-xs">🔄 Re-Attempt</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Token Modal -->
     <div id="tokenModal" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
