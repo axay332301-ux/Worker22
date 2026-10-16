@@ -1,5 +1,5 @@
 // =========================================================
-// RWA PORTAL LOGIC & MASTER LINK EXTRACTOR (app.js)
+// RWA PORTAL LOGIC & MASTER LINK EXTRACTOR (app.js)[span_8](start_span)[span_8](end_span)
 // =========================================================
 const DEFAULT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjQ3NTYzMTYiLCJ0aW1lc3RhbXAiOjE3OTE5Nzc2MTIsIml2X3ZlciI6MzMsInNlc3Npb24iOiJleUowZVhBaU9pSktWMVFpTENKaGJHY2lPaUpJVXpJMU5pSjkuZXlKcFpDSTZJalEzTlRZek1UWWlMQ0psYldGcGJDSTZJbk5oYm1SbFpYQnJZWE4zWVc0eU5UUkFaMjFoYVd3dVkyOXRJaXdpYm1GdFpTSTZJbk5oYm1SbFpYQWlMQ0owWlc1aGJuUlVlWEJsSWpvaWRYTmxjaUlzSW5SbGJtRnVkRTVoYldVaU9pSnliM3BuWVhKZlpHSWlMQ0owWlc1aGJuUkpaQ0k2SWlJc0ltUnBjM0J2YzJGaWJHVWlPbVpoYkhObGZRLjNLTWRpUHRjZ3BpYkMyMWhPNTlrVFRreTJkdlk0d19YR0F3UnE4N3o4aE0ifQ.LN3ukePscrf6LVISc9oJcyRh4V5sipHnTVUBvRcwRHk";
 
@@ -46,38 +46,20 @@ function resolvePdfUrl(encPdf, signedPdf) {
 
 const DB = {
     paidCourses: [
-        { id: "571", course_name: "SSC GD भर्ती 2027 (वीर बैच)**", exam_category: "RWA SSC EXAMS • PAID", exam_logo: "https://appx-wsb-gcp-mcdn.akamai.net.in/exam/2022-02-07-0.9839972577217094.png" }
+        { id: "571", course_name: "SSC GD भर्ती 2027 (वीर बैच)", exam_category: "RWA SSC EXAMS • PAID", exam_logo: "https://appx-wsb-gcp-mcdn.akamai.net.in/exam/2022-02-07-0.9839972577217094.png" }
     ],
     paidSubjects: [
         { subjectid: "3610", subject_name: "History (वीर बैच)", subject_logo: "" },
-        { subjectid: "1", subject_name: "Maths", subject_logo: "https://appxcontent.kaxa.in/subject/2024-04-10-0.8626713728066564.jpg" },
-        { subjectid: "3527", subject_name: "Physics Dharmendra Sir", subject_logo: "" }
+        { subjectid: "1", subject_name: "Maths", subject_logo: "https://appxcontent.kaxa.in/subject/2024-04-10-0.8626713728066564.jpg" }
     ],
-    paidTopics: {
-        "3610": [{ topicid: "42301", topic_name: "सिंधु सभ्यता##" }]
-    },
-    paidLectures: {
-        "42301": [
-            {
-                id: "349275",
-                Title: "History By Parul Mam || सिंधु सभ्यता",
-                date_and_time: "08-10-2026 at 02:00 pm",
-                thumbnail: "https://appx-content-v2.classx.co.in/paid_course3/2026-10-07-0_3401609217976156.jpg",
-                file_link: "yc79PF7PfaItE6uX7lAA8ABqbrWNB1WgbrzGsR2wlcFMhAR2tn+h+ETmGcuzjpU5lIYYSRnaL7bMlKrf7UouOCRvHozzqOa6f7eXz7ZPaEE0fRd/NiEP2WEQYJbqwKEM+MU8uRUEXFx4/07LTnptyQ==:ZmVkY2JhOTg3NjU0MzIxMA==",
-                download_links: [
-                    { quality: "720p", path: "m7hcRsBTJp5eNY5aTdn8qpPBOzdeUeGZQY2wVY0qocyzI/GQp7GTpQTXEQI3QwV4TBS4t/fcLhrLe6ZhZ45UCH+PnnUxKByF74TDwQBmgL8IryqFfW2RBko3ChFPEicQTi3gci9AKv0/IhnCF+NqXBt9k0YzrosmgyXn3Oh6AkPFrQ8XsVMQ7udZ3fwSrS+Y:ZmVkY2JhOTg3NjU0MzIxMA==" }
-                ]
-            }
-        ]
-    },
-    freeBatches: [], freeSubjects: [], freeTopics: {}, freeLectures: {}, quizQuestions: [],
-    comments: [{ user: "System", text: "Portal initialized successfully." }]
+    paidTopics: { "3610": [{ topicid: "42301", topic_name: "सिंधु सभ्यता" }] },
+    paidLectures: {}
 };
 
 let state = {
     cat: "paid", view: "batches", courseId: "571", courseName: "SSC GD भर्ती 2027",
     subjectId: null, subjectName: "", topicId: null, topicName: "",
-    mediaMap: {}, activeKey: null, currentPdfUrl: "", quizScore: 0
+    mediaMap: {}, activeKey: null, currentPdfUrl: ""
 };
 
 async function fetchAPI(endpoint, fallbackGetter) {
@@ -94,12 +76,12 @@ async function fetchAPI(endpoint, fallbackGetter) {
         });
         const json = await res.json();
         if (json && json.data && (Array.isArray(json.data) ? json.data.length > 0 : Object.keys(json.data).length > 0)) {
-            statusBadge.textContent = "● Live Server Connected";
+            if(statusBadge) statusBadge.textContent = "● Live Server Connected";
             return json.data;
         }
         throw new Error("Empty");
     } catch {
-        statusBadge.textContent = "● Hybrid Mode Active";
+        if(statusBadge) statusBadge.textContent = "● Hybrid Mode Active";
         return fallbackGetter();
     }
 }
@@ -117,7 +99,7 @@ function switchCategory(cat) {
 
 async function renderPaidBatches() {
     state.view = "batches";
-    document.getElementById("crumbText").textContent = "Purchased Courses";
+    document.getElementById("crumbText").textContent = "Purchased Courses (Tokens Active)";
     document.getElementById("headingText").textContent = "My Paid Batches";
     const list = await fetchAPI(`/get/course_by_id?id=571`, () => DB.paidCourses);
     const grid = document.getElementById("mainGrid");
@@ -128,12 +110,24 @@ async function renderPaidBatches() {
             <div onclick="openPaidCourse('${c.id}', '${(c.course_name || "").replace(/'/g, "")}')" class="grid-card overflow-hidden cursor-pointer flex flex-col justify-between">
                 <img src="${c.exam_logo}" onerror="this.src='https://placehold.co/600x320/101620/4777ff?text=RWA+Batch'" class="w-full h-44 object-cover">
                 <div class="p-4">
-                    <span class="text-[10px] text-emerald-400 font-bold">BATCH #${c.id}</span>
+                    <span class="text-[10px] text-emerald-400 font-bold">PAID TOKEN BATCH #${c.id}</span>
                     <h3 class="font-bold text-base mt-1">${c.course_name}</h3>
                     <p class="text-xs text-amber-400 mt-2 font-bold">Open Subjects & Classes ➔</p>
                 </div>
             </div>`;
     });
+}
+
+async function renderFreeBatches() {
+    state.view = "batches";
+    document.getElementById("crumbText").textContent = "Free Material";
+    document.getElementById("headingText").textContent = "Free Batches";
+    const grid = document.getElementById("mainGrid");
+    grid.innerHTML = `
+        <div onclick="openPaidCourse('571', 'Free Samanya Hindi')" class="grid-card p-5 cursor-pointer">
+            <h3 class="font-bold text-base">🆓 Free Samanya Hindi Practice Batch</h3>
+            <p class="text-xs text-slate-400 mt-1">Click to open classes & PDFs</p>
+        </div>`;
 }
 
 function openPaidCourse(id, name) {
@@ -148,7 +142,8 @@ function openPaidCourse(id, name) {
 
 async function loadCourseTab(tab) {
     ["subjects", "live", "tests", "telegram"].forEach(t => {
-        document.getElementById("sub_" + t).className = (t === tab) ? "primary text-xs" : "text-xs";
+        const el = document.getElementById("sub_" + t);
+        if(el) el.className = (t === tab) ? "primary text-xs" : "text-xs";
     });
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 text-xs">Loading...</div>`;
@@ -215,25 +210,26 @@ async function openPaidLectures(topId, topName) {
 
     const classes = await fetchAPI(
         `/get/livecourseclassbycoursesubtopconceptapiv3?courseid=${state.courseId}&subjectid=${state.subjectId}&topicid=${topId}&conceptid=1&start=0`,
-        () => DB.paidLectures[topId] || []
+        () => DB.paidLectures[topId] || [
+            {
+                id: "349275",
+                Title: "History By Parul Mam || सिंधु सभ्यता",
+                thumbnail: "https://appx-content-v2.classx.co.in/paid_course3/2026-10-07-0_3401609217976156.jpg",
+                file_link: "yc79PF7PfaItE6uX7lAA8ABqbrWNB1WgbrzGsR2wlcFMhAR2tn+h+ETmGcuzjpU5lIYYSRnaL7bMlKrf7UouOCRvHozzqOa6f7eXz7ZPaEE0fRd/NiEP2WEQYJbqwKEM+MU8uRUEXFx4/07LTnptyQ==:ZmVkY2JhOTg3NjU0MzIxMA==",
+                download_links: [{ quality: "720p", path: "m7hcRsBTJp5eNY5aTdn8qpPBOzdeUeGZQY2wVY0qocyzI/GQp7GTpQTXEQI3QwV4TBS4t/fcLhrLe6ZhZ45UCH+PnnUxKByF74TDwQBmgL8IryqFfW2RBko3ChFPEicQTi3gci9AKv0/IhnCF+NqXBt9k0YzrosmgyXn3Oh6AkPFrQ8XsVMQ7udZ3fwSrS+Y:ZmVkY2JhOTg3NjU0MzIxMA==" }]
+            }
+        ]
     );
     document.getElementById("mainGrid").innerHTML = "";
     renderLectureList(classes);
 }
 
-// =====================================================
-// MASTER LINK EXTRACTOR (Prioritizes transcoded-videos .m3u8)
-// =====================================================
 function extractQualitiesFromItem(item) {
     const qMap = {};
-
-    // Helper to prioritize and clean links (Avoid vodclasses eof.m3u8 dummy links)
     function addValidLink(qualityName, rawEncPath) {
         let u = decryptAppX(rawEncPath);
         if (u && u.startsWith("http")) {
-            // Filter out dummy/empty eof playlists
             if (u.includes("playlist_eof.m3u8")) return;
-            // Prioritize transcoded-videos master m3u8
             if (u.includes(".m3u8") && !u.includes("workers.dev")) {
                 u = WORKER_PROXY + encodeURIComponent(u);
             }
@@ -241,22 +237,16 @@ function extractQualitiesFromItem(item) {
         }
     }
 
-    // 1. Check encrypted_links (These contain the real 720p/480p transcoded master links with edge-cache-token)[span_1](start_span)[span_1](end_span)
     (item.encrypted_links || []).forEach(q => {
         addValidLink((q.quality || "HD") + " Master HLS", q.path);
     });
-
-    // 2. Check livestream_links
     (item.livestream_links || []).forEach(q => {
         addValidLink(q.quality || "Live HLS", q.path);
     });
-
-    // 3. Check download_links
     (item.download_links || []).forEach(q => {
         addValidLink((q.quality || "MP4") + " Direct", q.path);
     });
 
-    // 4. Fallback to main file_link only if no other master link exists
     const decFile = decryptAppX(item.file_link || "");
     if (decFile && decFile.startsWith("http") && !decFile.includes("playlist_eof.m3u8")) {
         let finalU = decFile.includes(".m3u8") && !decFile.includes("workers.dev") ? WORKER_PROXY + encodeURIComponent(decFile) : decFile;
@@ -264,7 +254,6 @@ function extractQualitiesFromItem(item) {
             qMap["Main Stream"] = finalU;
         }
     }
-
     return qMap;
 }
 
@@ -289,6 +278,10 @@ function renderLectureList(list) {
             pdf2: pdf2
         };
 
+        let pdfButtonsHTML = "";
+        if (pdf1) pdfButtonsHTML += `<button onclick="openPdf('${key}', 1)" class="text-xs bg-slate-800 border-slate-700">📄 PDF 1</button>`;
+        if (pdf2) pdfButtonsHTML += `<button onclick="openPdf('${key}', 2)" class="text-xs bg-slate-800 border-slate-700">📄 PDF 2</button>`;
+
         grid.innerHTML += `
             <div class="grid-card overflow-hidden flex flex-col justify-between">
                 <div>
@@ -300,13 +293,12 @@ function renderLectureList(list) {
                 </div>
                 <div class="p-3.5 border-t border-[#273142] flex flex-wrap gap-2">
                     <button onclick="playClassInRwaPlayer('${key}')" class="primary flex-1 text-xs">▶ Watch</button>
-                    ${pdf1 ? `<button onclick="openPdf('${key}', 1)" class="text-xs">📄 PDF</button>` : ""}
+                    ${pdfButtonsHTML}
                 </div>
             </div>`;
     });
 }
 
-// 100% Guaranteed Master Link Delivery to Player
 async function playClassInRwaPlayer(key) {
     state.activeKey = key;
     const info = state.mediaMap[key];
@@ -319,9 +311,8 @@ async function playClassInRwaPlayer(key) {
     const urlInput = document.getElementById("url");
     const qSel = document.getElementById("qualitySelect");
     
-    urlInput.value = "Fetching original master links from server...";
+    urlInput.value = "Loading stream...";
 
-    // Fetch fresh secure streams from server API
     if (state.cat === "paid" && info.id) {
         const fresh = await fetchAPI(`/get/fetchVideoDetailsById?course_id=${state.courseId}&video_id=${info.id}&ytflag=0&folder_wise_course=0&lc_app_api_url=`, () => null);
         if (fresh && typeof fresh === "object") {
@@ -339,7 +330,6 @@ async function playClassInRwaPlayer(key) {
         qSel.innerHTML = validKeys.map(k => `<option value="${k}">${k}</option>`).join("");
         qSel.classList.remove("hidden");
         
-        // Prioritize 720p Master or HLS Master
         const bestKey = validKeys.find(k => k.includes("720p") || k.includes("Master")) || validKeys[0];
         qSel.value = bestKey;
         urlInput.value = info.qualities[bestKey];
@@ -348,9 +338,6 @@ async function playClassInRwaPlayer(key) {
     } else {
         qSel.classList.add("hidden");
         urlInput.value = "";
-        document.getElementById("status").textContent = "Error";
-        document.getElementById("msg").textContent = "⚠️ Original Master link nahi mila. Token check karein.";
-        document.getElementById("msg").style.color = "#ff9696";
     }
 }
 
@@ -362,7 +349,6 @@ function changeLectureQuality(qLabel) {
     }
 }
 
-// PDF & Utility Functions
 function openPdf(key, num) {
     const info = state.mediaMap[key];
     const u = num === 2 ? info.pdf2 : info.pdf1;
@@ -397,9 +383,7 @@ function goBack() {
         else if (state.view === "topics") openPaidCourse(state.courseId, state.courseName);
         else renderPaidBatches();
     } else {
-        if (state.view === "lectures") openFreeTopics(state.subjectId, state.subjectName);
-        else if (state.view === "topics") openFreeSubjects(state.courseId, state.courseName);
-        else renderFreeBatches();
+        renderFreeBatches();
     }
 }
 
