@@ -303,42 +303,41 @@ video {
     to { transform: rotate(360deg); }
 }
 
-/* TRANSPARENT YOUTUBE-STYLE OVERLAY CONTROLS */
+/* 90% TRANSPARENT OVERLAY CONTROLS WITH CLEAN ICON BUTTONS */
 .controls {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 10px 14px;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(2,132,199,0.85) 100%);
-    backdrop-filter: blur(8px);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.1); /* 90% Transparent */
+    backdrop-filter: blur(4px);
     z-index: 25;
+    transition: opacity 0.3s ease;
 }
 
 .seek-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-bottom: 4px;
 }
 
 .seek {
     flex: 1;
-    height: 6px;
+    height: 5px;
     accent-color: #38bdf8;
     cursor: pointer;
     border-radius: 99px;
 }
 
 .time-inline {
-    font-size: 11px;
-    font-weight: 900;
+    font-size: 10px;
+    font-weight: 800;
     color: #ffffff;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 2px 8px;
-    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
@@ -347,75 +346,71 @@ video {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 
-.ctrl-btn {
-    background: rgba(255, 255, 255, 0.2);
+.ctrl-icon-btn {
+    background: rgba(0, 0, 0, 0.15); /* 90% transparent icon background */
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 10px;
-    padding: 6px 10px;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    backdrop-filter: blur(4px);
-}
-
-.ctrl-btn:hover {
-    background: #0284c7;
-    color: #ffffff;
-    border-color: #0284c7;
-}
-
-.play-main-btn {
-    background: linear-gradient(135deg, #0284c7, #2563eb);
-    color: #ffffff;
-    border: 0;
-    padding: 6px 14px;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.sett-btn {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: #ffffff;
-    border: 0;
+.ctrl-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
 }
 
-.dl-btn {
-    background: linear-gradient(135deg, #059669, #0d9488);
-    color: #ffffff;
-    border: 0;
+.play-main-icon {
+    background: rgba(2, 132, 199, 0.6);
 }
 
-.pdf-btn-1 {
-    background: linear-gradient(135deg, #ea580c, #f59e0b);
-    color: #ffffff;
-    border: 0;
+.pdf-icon-1 {
+    background: rgba(234, 88, 12, 0.5);
+    border-radius: 8px !important;
+    width: auto !important;
+    padding: 0 6px;
+    font-size: 10px;
 }
 
-.pdf-btn-2 {
-    background: linear-gradient(135deg, #db2777, #e11d48);
-    color: #ffffff;
-    border: 0;
+.pdf-icon-2 {
+    background: rgba(219, 39, 119, 0.5);
+    border-radius: 8px !important;
+    width: auto !important;
+    padding: 0 6px;
+    font-size: 10px;
+}
+
+.sett-icon {
+    background: rgba(79, 70, 229, 0.5);
+}
+
+.dl-icon {
+    background: rgba(5, 150, 105, 0.5);
 }
 
 .ott-settings-popup {
     position: absolute;
     right: 12px;
-    bottom: 72px;
-    width: 215px;
+    bottom: 65px;
+    width: 200px;
     max-width: 85vw;
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(14px);
-    border: 2px solid #38bdf8;
-    border-radius: 16px;
-    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 10px;
     z-index: 30;
     display: none;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
     color: #ffffff;
 }
 
@@ -429,53 +424,50 @@ video {
     justify-content: space-between;
     align-items: center;
     font-weight: 900;
-    font-size: 12px;
+    font-size: 11px;
     color: #38bdf8;
-    padding-bottom: 6px;
+    padding-bottom: 5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .sett-close {
     background: transparent;
     border: 0;
     color: #f43f5e;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
     cursor: pointer;
-    padding: 0 4px;
 }
 
 .sett-title {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 900;
     color: #7dd3fc;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     text-transform: uppercase;
 }
 
 .sett-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 4px;
 }
 
 .q-option, .spd-option {
     background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 4px 9px;
-    border-radius: 8px;
-    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 10px;
     font-weight: 800;
     cursor: pointer;
-    transition: all 0.15s ease;
 }
 
 .q-option.active, .spd-option.active {
-    background: linear-gradient(135deg, #0284c7, #2563eb);
+    background: #0284c7;
     color: #ffffff;
-    border-color: transparent;
 }
 
 .progressBox {
