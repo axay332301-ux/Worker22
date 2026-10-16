@@ -1,271 +1,433 @@
-/* =========================================================
-   ASMANI SKY VIDEO PLAYER SCRIPT (player.js)
-   ========================================================= */
+// =========================================================
+// RWA ULTIMATE ASMANI SKY OTT PLAYER ENGINE (player.js)
+// =========================================================
+const PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
+const SEGMENT = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
 
-let video = document.getElementById('video');
-let hlsScreen = document.getElementById('hlsScreen');
-let ytScreen = document.getElementById('ytScreen');
-let ytFrame = document.getElementById('ytFrame');
-let playBtn = document.getElementById('toggle');
-let backBtn = document.getElementById('back');
-let nextBtn = document.getElementById('next');
-let muteBtn = document.getElementById('mute');
-let fsBtn = document.getElementById('fs');
-let pipBtn = document.getElementById('pip');
-let downloadBtn = document.getElementById('download');
-let seekbar = document.getElementById('seek');
-let timeDisplay = document.getElementById('time');
-let bufferLoader = document.getElementById('bufferLoader');
-let settingsMenu = document.getElementById('settingsMenu');
-let qualityList = document.getElementById('qualityList');
+const v = document.getElementById("video");
+const input = document.getElementById("url");
+const bufferLoader = document.getElementById("bufferLoader");
 
-let hlsInstance = null;
-let currentVideoDuration = 0;
+let hls = null;
+let cachedToken = "";
+let resumeSeekTime = 0;
 
-// Initialize Player Event Listeners
-document.addEventListener("DOMContentLoaded", () => {
-    if (!video) return;
+function showLoader(show) {
+    if (!bufferLoader) return;
+    if (show) bufferLoader.classList.remove("hidden");
+    else bufferLoader.classList.add("hidden");
+}
 
-    // Play / Pause Toggle
-    playBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (video.paused) {
-            video.play().catch(err => console.log(err));
+function valid(u) {
+    try {
+        return ["http:", "https:"].includes(new URL(u).protocol);
+    } catch {
+        return false;
+    }
+}
+
+// Unwrap URL if already proxied so edge-cache-token can be extracted cleanly
+function unwrapOriginalUrl(u) {
+    if (!u) return "";
+    try {
+        const parsed = new URL(u);
+        if (parsed.hostname.includes("workers.dev") && parsed.searchParams.has("url")) {
+            return decodeURIComponent(parsed.searchParams.get("url"));
+        }
+    } catch {}
+    return u;
+}
+
+function manifest(u) {
+    const rawUrl = unwrapOriginalUrl(u);
+    try {
+        const x = new URL(rawUrl);
+        if (x.pathname.toLowerCase().includes(".m3u8") || x.hostname.includes("classx.co.in") || x.hostname.includes("akamai.net.in")) {
+            return PROXY + encodeURIComponent(rawUrl);
+        }
+    } catch {}
+    return rawUrl;
+}
+
+function segment(u) {
+    return /\.(ts|m4s|mp4|aac|mp3|vtt|webvtt)(\?|$)/i.test(u.split("?")[0]);
+}
+
+class BackendLoader extends Hls.DefaultConfig.loader {
+    load(ctx, cfg, cb) {
+        let originalUrl = ctx.url;
+        let mainUrl = input ? unwrapOriginalUrl(input.value.trim()) : "";
+
+        // 1. Extract and cache edge-cache-token from main URL
+        let match = mainUrl.match(/(edge-cache-token=[^&]+)/);
+        if (match) {
+            cachedToken = match[1];
+        }
+
+        // 2. If URL is already proxied by our worker, pass it directly
+        if (originalUrl.includes("allswbatch22.workers.dev")) {
+            ctx.url = originalUrl;
+            super.load(ctx, cfg, cb);
+            return;
+        }
+
+        // 3. Inject cached token into child playlists and segments
+        if (cachedToken && !originalUrl.includes("edge-cache-token=")) {
+            originalUrl += (originalUrl.includes("?") ? "&" : "?") + cachedToken;
+        }
+
+        // 4. Route child .m3u8 to /stream and .ts segments to /proxy
+        if (originalUrl.includes(".m3u8")) {
+            ctx.url = PROXY + encodeURIComponent(originalUrl);
+        } else if (segment(originalUrl)) {
+            ctx.url = SEGMENT + encodeURIComponent(originalUrl);
         } else {
-            video.pause();
+            ctx.url = originalUrl;
         }
-    });
 
-    video.addEventListener('play', () => { playBtn.innerText = "⏸"; });
-    video.addEventListener('pause', () => { playBtn.innerText = "▶"; });
+        super.load(ctx, cfg, cb);
+    }
+}
 
-    // 10s Rewind & Forward
-    backBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        video.currentTime = Math.max(0, video.currentTime - 10);
-    });
+function stopPlayer() {
+    if (hls) {
+        try { hls.destroy(); } catch {}
+        hls = null;
+    }
+    if (v) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+    }
+    const ytFrame = document.getElementById("ytFrame");
+    if (ytFrame) ytFrame.src = "";
+    showLoader(false);
+}
 
-    nextBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
-    });
+// Close Player & return to Explorer Slide
+window.closePlayerBox = function() {
+    stopPlayer();
+    const menu = document.getElementById("settingsMenu");
+    if (menu) menu.classList.remove("show");
+    if (typeof closeInlinePdfAndReset === "function") {
+        closeInlinePdfAndReset();
+    }
+    if (typeof showSlide === "function") {
+        showSlide("slideExplorer");
+    }
+};
 
-    // Mute / Unmute
-    muteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        video.muted = !video.muted;
-        muteBtn.innerText = video.muted ? "🔇" : "🔊";
-    });
+function start() {
+    let raw = input ? input.value.trim() : "";
+    if (!raw) return;
 
-    // Seekbar Update
-    video.addEventListener('timeupdate', () => {
-        if (!isNaN(video.duration) && video.duration > 0) {
-            let percent = (video.currentTime / video.duration) * 1000;
-            seekbar.value = percent;
-            timeDisplay.innerText = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
-        }
-    });
+    stopPlayer();
+    showLoader(true);
 
-    seekbar.addEventListener('input', (e) => {
-        e.stopPropagation();
-        if (!isNaN(video.duration) && video.duration > 0) {
-            let time = (seekbar.value / 1000) * video.duration;
-            video.currentTime = time;
-        }
-    });
+    const cleanRaw = unwrapOriginalUrl(raw);
+    const isYT = (!cleanRaw.startsWith("http") && cleanRaw.length >= 10 && cleanRaw.length <= 15) || cleanRaw.includes("youtube.com") || cleanRaw.includes("youtu.be");
 
-    // Buffering Spinner States
-    video.addEventListener('waiting', () => {
-        if (bufferLoader) bufferLoader.classList.remove('hidden');
-    });
-    video.addEventListener('playing', () => {
-        if (bufferLoader) bufferLoader.classList.add('hidden');
-    });
-    video.addEventListener('canplay', () => {
-        if (bufferLoader) bufferLoader.classList.add('hidden');
-    });
+    if (isYT) {
+        showLoader(false);
+        document.getElementById("hlsScreen").classList.add("hidden");
+        document.getElementById("ytScreen").classList.remove("hidden");
 
-    // Picture-in-Picture
-    if (pipBtn) {
-        pipBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            try {
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                } else if (document.pictureInPictureEnabled) {
-                    await video.requestPictureInPicture();
+        let ytId = cleanRaw;
+        if (cleanRaw.includes("v=")) ytId = cleanRaw.split("v=")[1].split("&")[0];
+        else if (cleanRaw.includes("youtu.be/")) ytId = cleanRaw.split("youtu.be/")[1].split("?")[0];
+
+        const ytFrame = document.getElementById("ytFrame");
+        if (ytFrame) ytFrame.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
+        return;
+    }
+
+    document.getElementById("ytScreen").classList.add("hidden");
+    document.getElementById("hlsScreen").classList.remove("hidden");
+
+    if (!valid(cleanRaw)) {
+        showLoader(false);
+        return;
+    }
+
+    let tokMatch = cleanRaw.match(/(edge-cache-token=[^&]+)/);
+    if (tokMatch) cachedToken = tokMatch[1];
+
+    // Direct MP4 fallback check
+    if (cleanRaw.includes(".mp4") && !cleanRaw.includes(".m3u8")) {
+        v.src = cleanRaw;
+        populateQualitySettings([]);
+        v.onloadedmetadata = () => {
+            showLoader(false);
+            if (resumeSeekTime > 0) {
+                v.currentTime = resumeSeekTime;
+                resumeSeekTime = 0;
+            }
+            v.play().catch(() => {});
+        };
+        return;
+    }
+
+    let src = manifest(cleanRaw);
+
+    if (Hls.isSupported()) {
+        hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: false,
+            backBufferLength: 30,
+            maxBufferLength: 25,
+            loader: BackendLoader
+        });
+
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+            showLoader(false);
+            populateQualitySettings(data.levels || []);
+            if (resumeSeekTime > 0) {
+                v.currentTime = resumeSeekTime;
+                resumeSeekTime = 0;
+            }
+            v.play().catch(() => {});
+        });
+
+        hls.on(Hls.Events.ERROR, (_, d) => {
+            if (d.fatal) {
+                showLoader(false);
+                if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                    try { hls.recoverMediaError(); } catch {}
                 }
-            } catch (err) {
-                console.log("PiP Error:", err);
             }
         });
+
+        hls.attachMedia(v);
+    } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
+        v.src = src;
+        v.onloadedmetadata = () => {
+            showLoader(false);
+            if (resumeSeekTime > 0) {
+                v.currentTime = resumeSeekTime;
+                resumeSeekTime = 0;
+            }
+            v.play().catch(() => {});
+        };
     }
+}
 
-    // =========================================================
-    // FULLSCREEN ENHANCEMENT: HIDE ALL BUTTONS EXCEPT BACK BUTTON
-    // =========================================================
-    if (fsBtn) {
-        fsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleAsmaniFullscreen();
+// =========================================================
+// COMPACT QUALITY SELECTOR
+// =========================================================
+function populateQualitySettings(hlsLevels) {
+    const qList = document.getElementById("qualityList");
+    if (!qList) return;
+
+    const activeInfo = (typeof state !== "undefined" && state.activeKey && state.mediaMap) ? state.mediaMap[state.activeKey] : null;
+    const serverQualsObj = (activeInfo && activeInfo.qualities) ? activeInfo.qualities : {};
+    const serverKeys = Object.keys(serverQualsObj);
+
+    let html = "";
+
+    if (serverKeys.length > 0) {
+        const currentRaw = unwrapOriginalUrl(input.value);
+        serverKeys.forEach((qKey, idx) => {
+            const targetRaw = unwrapOriginalUrl(serverQualsObj[qKey]);
+            const isAct = (currentRaw && targetRaw && currentRaw === targetRaw) || (!currentRaw && idx === 0);
+            html += `<div class="q-option ${isAct ? 'active' : ''}" onclick="switchServerQuality('${qKey.replace(/'/g, "")}', this)">${qKey}</div>`;
         });
-    }
-
-    // Download Button simulation
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startVideoDownload();
-        });
-    }
-});
-
-// Load Video Source (HLS or MP4)
-function loadVideoSource(url, title = "Class Video") {
-    let titleEl = document.getElementById('playingTitle');
-    if (titleEl) titleEl.innerText = `▶ ${title}`;
-
-    if (hlsScreen) hlsScreen.classList.remove('hidden');
-    if (ytScreen) ytScreen.classList.add('hidden');
-
-    if (Hls.isSupported() && url.includes('.m3u8')) {
-        if (hlsInstance) {
-            hlsInstance.destroy();
-        }
-        hlsInstance = new Hls();
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-            video.play().catch(err => console.log(err));
-            populateQualityLevels(hlsInstance.levels);
-        });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl') && url.includes('.m3u8')) {
-        // Native Safari HLS support
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
-            video.play().catch(err => console.log(err));
+    } else if (hlsLevels && hlsLevels.length > 1) {
+        html += `<div class="q-option active" onclick="changeHlsLevel(-1, this)">Auto</div>`;
+        const seenHeights = new Set();
+        hlsLevels.forEach((lvl, idx) => {
+            let label = lvl.height ? `${lvl.height}p` : `${idx + 1}p`;
+            if (!seenHeights.has(label)) {
+                seenHeights.add(label);
+                html += `<div class="q-option" onclick="changeHlsLevel(${idx}, this)">${label}</div>`;
+            }
         });
     } else {
-        // Standard MP4 / WebM
-        if (hlsInstance) {
-            hlsInstance.destroy();
-            hlsInstance = null;
+        html = `<div class="q-option active" onclick="toggleSettingsMenu()">720p HD</div>`;
+    }
+
+    qList.innerHTML = html;
+}
+
+window.changeHlsLevel = function(idx, el) {
+    if (hls) hls.currentLevel = idx;
+    document.querySelectorAll("#qualityList .q-option").forEach(o => o.classList.remove("active"));
+    if (el) el.classList.add("active");
+    toggleSettingsMenu();
+};
+
+window.switchServerQuality = function(qKey, el) {
+    resumeSeekTime = v ? v.currentTime : 0;
+    document.querySelectorAll("#qualityList .q-option").forEach(o => o.classList.remove("active"));
+    if (el) el.classList.add("active");
+    toggleSettingsMenu();
+    if (typeof changeLectureQuality === "function") {
+        changeLectureQuality(qKey, resumeSeekTime);
+    }
+};
+
+window.changeSpd = function(rate, el) {
+    if (v) v.playbackRate = rate;
+    document.querySelectorAll(".spd-option").forEach(o => o.classList.remove("active"));
+    if (el) el.classList.add("active");
+    toggleSettingsMenu();
+};
+
+window.toggleSettingsMenu = function() {
+    const menu = document.getElementById("settingsMenu");
+    if (menu) menu.classList.toggle("show");
+};
+
+if (v) {
+    v.addEventListener("click", () => {
+        const menu = document.getElementById("settingsMenu");
+        if (menu && menu.classList.contains("show")) {
+            menu.classList.remove("show");
         }
-        video.src = url;
-        video.load();
-        video.play().catch(err => console.log(err));
-    }
-}
-
-// Load YouTube Embed Source
-function loadYouTubeSource(ytUrl, title = "Live / Free YouTube Class") {
-    let titleEl = document.getElementById('playingTitle');
-    if (titleEl) titleEl.innerText = `▶ ${title}`;
-
-    if (hlsScreen) hlsScreen.classList.add('hidden');
-    if (ytScreen) ytScreen.classList.remove('hidden');
-
-    let embedUrl = ytUrl;
-    if (ytUrl.includes('watch?v=')) {
-        embedUrl = ytUrl.replace('watch?v=', 'embed/');
-    } else if (ytUrl.includes('youtu.be/')) {
-        let id = ytUrl.split('youtu.be/')[1]?.split('?')[0];
-        embedUrl = `https://www.youtube.com/embed/${id}`;
-    }
-    if (ytFrame) ytFrame.src = embedUrl;
-}
-
-// Toggle Asmani Fullscreen Mode
-function toggleAsmaniFullscreen() {
-    if (!hlsScreen) return;
-
-    if (!document.fullscreenElement && !hlsScreen.classList.contains('fullscreen-mode')) {
-        // Enter Fullscreen Mode
-        if (hlsScreen.requestFullscreen) {
-            hlsScreen.requestFullscreen().catch(err => {
-                // Fallback CSS fullscreen if API restricted
-                hlsScreen.classList.add('fullscreen-mode');
-            });
-        } else {
-            hlsScreen.classList.add('fullscreen-mode');
-        }
-        if (fsBtn) fsBtn.innerText = "⤹";
-    } else {
-        // Exit Fullscreen Mode
-        if (document.exitFullscreen && document.fullscreenElement) {
-            document.exitFullscreen().catch(err => {});
-        }
-        hlsScreen.classList.remove('fullscreen-mode');
-        if (fsBtn) fsBtn.innerText = "⛶";
-    }
-}
-
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && hlsScreen) {
-        hlsScreen.classList.remove('fullscreen-mode');
-        if (fsBtn) fsBtn.innerText = "⛶";
-    }
-});
-
-// Toggle OTT Settings Menu
-function toggleSettingsMenu() {
-    if (settingsMenu) {
-        settingsMenu.classList.toggle('active');
-    }
-}
-
-// Populate Quality Levels from HLS
-function populateQualityLevels(levels) {
-    if (!qualityList) return;
-    qualityList.innerHTML = `<div class="q-option active" onclick="setQuality(-1, this); event.stopPropagation();">Auto</div>`;
-    
-    levels.forEach((lvl, index) => {
-        let qName = lvl.height ? `${lvl.height}p` : `Level ${index + 1}`;
-        qualityList.innerHTML += `<div class="q-option" onclick="setQuality(${index}, this); event.stopPropagation();">${qName}</div>`;
     });
 }
 
-function setQuality(levelIdx, el) {
-    if (hlsInstance) {
-        hlsInstance.currentLevel = levelIdx;
-    }
-    document.querySelectorAll('.q-option').forEach(opt => opt.classList.remove('active'));
-    if (el) el.classList.add('active');
-    toggleSettingsMenu();
-}
+// =========================================================
+// VIDEO SEGMENT MERGER & MP4 DOWNLOADER
+// =========================================================
+async function downloadMerged() {
+    const raw = input ? unwrapOriginalUrl(input.value.trim()) : "";
+    if (!valid(raw) || !hls || !hls.levels || hls.levels.length === 0) return;
 
-// Change Video Playback Speed
-function changeSpd(spd, el) {
-    video.playbackRate = spd;
-    document.querySelectorAll('.spd-option').forEach(opt => opt.classList.remove('active'));
-    if (el) el.classList.add('active');
-    toggleSettingsMenu();
-}
+    const box = document.getElementById("downloadBox");
+    const text = document.getElementById("downloadText");
+    const bar = document.getElementById("bar");
+    if (box) box.classList.add("show");
+    if (bar) bar.style.width = "2%";
+    if (text) text.textContent = "Preparing video segments...";
 
-// Format Seconds to MM:SS
-function formatTime(seconds) {
-    let m = Math.floor(seconds / 60);
-    let s = Math.floor(seconds % 60);
-    return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
-}
+    try {
+        let levelIndex = hls.currentLevel >= 0 ? hls.currentLevel : 0;
+        let fragments = hls.levels[levelIndex].details.fragments;
+        let downloadedBuffers = [];
+        let total = fragments.length;
+        let match = raw.match(/(edge-cache-token=[^&]+)/);
+        let tokenStr = match ? match[1] : cachedToken;
 
-// Simulated Video Download
-function startVideoDownload() {
-    let box = document.getElementById('downloadBox');
-    let bar = document.getElementById('bar');
-    let text = document.getElementById('downloadText');
-    if (!box || !bar || !text) return;
-
-    box.style.display = 'block';
-    let progress = 0;
-    let interval = setInterval(() => {
-        progress += 5;
-        bar.style.width = `${progress}%`;
-        text.innerText = `Downloading video streams... ${progress}%`;
-        if (progress >= 100) {
-            clearInterval(interval);
-            text.innerText = `✅ Download completed successfully! Check downloads.`;
-            setTimeout(() => { box.style.display = 'none'; }, 4000);
+        if (fragments[0] && fragments[0].initSegment) {
+            let initUrl = fragments[0].initSegment.url;
+            if (!initUrl.includes("allswbatch22.workers.dev")) {
+                if (tokenStr && !initUrl.includes("edge-cache-token=")) initUrl += (initUrl.includes("?") ? "&" : "?") + tokenStr;
+                initUrl = SEGMENT + encodeURIComponent(initUrl);
+            }
+            let res = await fetch(initUrl);
+            if (res.ok) downloadedBuffers.push(await res.arrayBuffer());
         }
-    }, 150);
+
+        for (let i = 0; i < total; i++) {
+            if (text) text.textContent = `Downloading: ${i + 1} / ${total} (${Math.round(((i + 1) / total) * 100)}%)`;
+            let segUrl = fragments[i].url;
+            if (!segUrl.includes("allswbatch22.workers.dev")) {
+                if (tokenStr && !segUrl.includes("edge-cache-token=")) segUrl += (segUrl.includes("?") ? "&" : "?") + tokenStr;
+                segUrl = SEGMENT + encodeURIComponent(segUrl);
+            }
+            let segRes = await fetch(segUrl);
+            if (!segRes.ok) throw new Error(`Segment ${i + 1} Error`);
+            downloadedBuffers.push(await segRes.arrayBuffer());
+            if (bar) bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
+        }
+
+        if (text) text.textContent = "Merging MP4 file...";
+        const blob = new Blob(downloadedBuffers, { type: "video/mp4" });
+        const finalUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = finalUrl;
+        a.download = `RWA_Class_${Math.floor(Math.random() * 10000)}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(finalUrl), 60000);
+        if (text) text.textContent = "✅ Download Complete!";
+        setTimeout(() => { if (box) box.classList.remove("show"); }, 4000);
+    } catch (e) {
+        if (text) text.textContent = "⚠️ Download error: " + e.message;
+    }
 }
+
+function fmt(x) {
+    if (!Number.isFinite(x)) return "00:00";
+    x = Math.floor(x);
+    let h = Math.floor(x / 3600), m = Math.floor(x % 3600 / 60), s = x % 60;
+    return h
+        ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+        : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// Bind Player Controls
+const toggleBtn = document.getElementById("toggle");
+if (toggleBtn) toggleBtn.onclick = () => v.paused ? v.play() : v.pause();
+
+v.onplay = () => { if (toggleBtn) toggleBtn.textContent = "⏸"; showLoader(false); };
+v.onpause = () => { if (toggleBtn) toggleBtn.textContent = "▶"; };
+v.onwaiting = () => showLoader(true);
+v.onplaying = () => showLoader(false);
+v.oncanplay = () => showLoader(false);
+
+const backBtn = document.getElementById("back");
+if (backBtn) backBtn.onclick = () => v.currentTime = Math.max(0, v.currentTime - 10);
+
+const nextBtn = document.getElementById("next");
+if (nextBtn) nextBtn.onclick = () => v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10);
+
+const muteBtn = document.getElementById("mute");
+if (muteBtn) muteBtn.onclick = () => {
+    v.muted = !v.muted;
+    muteBtn.textContent = v.muted ? "🔇" : "🔊";
+};
+
+const dlBtn = document.getElementById("download");
+if (dlBtn) dlBtn.onclick = downloadMerged;
+
+const pipBtn = document.getElementById("pip");
+if (pipBtn) pipBtn.onclick = async () => {
+    try {
+        if (document.pictureInPictureElement) await document.exitPictureInPicture();
+        else if (v.requestPictureInPicture) await v.requestPictureInPicture();
+    } catch {}
+};
+
+// Fullscreen Control (Hides header & other buttons, shows only back button when in fullscreen)
+const fsBtn = document.getElementById("fs");
+const screenEl = document.getElementById("hlsScreen");
+const headerBar = document.getElementById("playerHeaderBar");
+const controlsBar = document.getElementById("playerControlsBar");
+
+if (fsBtn && screenEl) {
+    fsBtn.onclick = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await screenEl.requestFullscreen();
+            } else {
+                await document.exitFullscreen();
+            }
+        } catch {}
+    };
+}
+
+document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+        if (headerBar) headerBar.classList.add("hidden");
+        // Hide extra buttons in control bar, keep only back button / essential items visible or style fullscreen
+    } else {
+        if (headerBar) headerBar.classList.remove("hidden");
+    }
+});
+
+v.ontimeupdate = () => {
+    let d = v.duration;
+    const seekEl = document.getElementById("seek");
+    const timeEl = document.getElementById("time");
+    if (Number.isFinite(d) && d > 0 && seekEl) seekEl.value = v.currentTime / d * 1000;
+    if (timeEl) timeEl.textContent = fmt(v.currentTime) + " / " + fmt(d);
+};
+
+const seekEl = document.getElementById("seek");
+if (seekEl) seekEl.oninput = e => {
+    if (Number.isFinite(v.duration)) v.currentTime = e.target.value / 1000 * v.duration;
+};
