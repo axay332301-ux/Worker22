@@ -1,847 +1,907 @@
 /* =========================================================
-   RWA SKY PRO PORTAL — MAIN APPLICATION ENGINE (app.js)
-   Features:
-   - Multi-Token Pool Manager & Course Merger
-   - Paid & Free Batches, Subjects, Topics & Lectures Explorer
-   - Inline PDF & Standalone PDF Viewers (AppX / Google Docs)
-   - Official Paid & Free CBT Test Series, Exam Timer, Scoring & Solutions
+   RWA SKY PRO PORTAL - MAIN APPLICATION SCRIPT (app.js)
    ========================================================= */
 
-// Multi-Token Pool Storage Key
-const LS_TOKEN_POOL_KEY = "rwa_sky_token_pool_v1";
+// Global State Management
+let appState = {
+    currentSlide: 'slideHome',
+    navigationStack: ['slideHome'],
+    activeMode: 'paid', // 'paid', 'free', 'paid_ts', 'free_ts'
+    tokens: [
+        { label: "Default Token", token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", uid: "" }
+    ],
+    selectedTokenIndex: 0,
+    currentUser: null,
+    coursesList: [],
+    currentCourse: null,
+    currentBatchId: null,
+    currentSubjectId: null,
+    currentTopicId: null,
+    currentSubTab: 'subjects',
+    subjectsList: [],
+    liveList: [],
+    testsList: [],
+    telegramLink: '',
+    topicsList: [],
+    lessonsList: [],
+    currentLesson: null,
+    // CBT Test Series State
+    cbtTestId: null,
+    cbtQuestions: [],
+    cbtCurrentQIndex: 0,
+    cbtAnswers: {},
+    cbtTimerSeconds: 3600,
+    cbtTimerInterval: null,
+    cbtSubmitted: false
+};
 
-// Default Token Pool (Includes default sandeep token)
-let tokenPool = [
-    {
-        id: "tok_default",
-        label: "Default Account (sandeep #4756316)",
-        uid: "4756316",
-        token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjQ3NTYzMTYiLCJlbWFpbCI6InNhbmRlZXBrYXN3YW4yNTRAZ21haWwuY29tIiwidGltZXN0YW1wIjoxNzU5MDE1MDc1fQ.1X6N7pX9qV3mK2wL8zR5yT4vB0nJ6cH8gF2dA4sE1uI"
-    }
-];
-
-// Current Explorer State
-let currentExplorerMode = "paid"; // "paid" | "free" | "paid_ts" | "free_ts"
-let activeBatchData     = null;
-let activeSubjectData   = null;
-let activeTopicData     = null;
-
-// CBT Test Series State
-let currentTestObj      = null;
-let cbtQuestionsList    = [];
-let cbtUserAnswers      = {}; // qIndex -> optionIndex
-let cbtVisitedState     = {}; // qIndex -> boolean
-let cbtCurrentQIdx      = 0;
-let cbtTimerSeconds     = 3600;
-let cbtTimerInterval    = null;
-let cbtIsSubmitted      = false;
+// Initialize App on DOM Content Loaded
+document.addEventListener("DOMContentLoaded", () => {
+    loadTokensFromStorage();
+    updateTokenBadge();
+    renderTokenList();
+    fetchUserProfile();
+    
+    // Global Event Bubbling Stoppers for Interactive Elements
+    document.querySelectorAll('button, input, select, textarea').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    });
+});
 
 /* =========================================================
-   1. NAVIGATION & SLIDE SWITCHER
+   NAVIGATION & SLIDE ROUTER
    ========================================================= */
-function showOnlySlide(slideId) {
-    const slides = [
-        "slideHome", "slideExplorer", "slidePlayer", 
-        "slideTestAttempt", "slideTokens", "slidePdf", 
-        "slideProfile", "slideLogin"
-    ];
-
-    slides.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (id === slideId) {
-            el.classList.remove("hidden-slide");
-            el.classList.add("active-slide");
-        } else {
-            el.classList.add("hidden-slide");
-            el.classList.remove("active-slide");
-        }
+function switchSlide(slideId) {
+    document.querySelectorAll('.slide-page').forEach(page => {
+        page.classList.remove('active-slide');
+        page.classList.add('hidden-slide');
     });
 
-    // Auto scroll top
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    let target = document.getElementById(slideId);
+    if (target) {
+        target.classList.remove('hidden-slide');
+        target.classList.add('active-slide');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    appState.currentSlide = slideId;
 }
 
-function goHomeHub() {
-    if (typeof stopHlsVideo === "function") stopHlsVideo();
-    showOnlySlide("slideHome");
-    const navNav = document.getElementById("topHeaderNav");
-    if (navNav) navNav.classList.remove("hidden");
+function goHomeHub(e) {
+    if (e) e.stopPropagation();
+    appState.navigationStack = ['slideHome'];
+    switchSlide('slideHome');
+}
+
+function pushSlide(slideId) {
+    appState.navigationStack.push(slideId);
+    switchSlide(slideId);
 }
 
 function handleGlobalBack() {
-    goHomeHub();
+    if (appState.navigationStack.length > 1) {
+        appState.navigationStack.pop();
+        let prevSlide = appState.navigationStack[appState.navigationStack.length - 1];
+        switchSlide(prevSlide);
+    } else {
+        goHomeHub();
+    }
 }
 
 /* =========================================================
-   2. MULTI-TOKEN POOL MANAGER
+   USER PROFILE, LOGIN & LOGOUT MANAGEMENT
    ========================================================= */
-function initTokenPool() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(LS_TOKEN_POOL_KEY));
-        if (Array.isArray(saved) && saved.length > 0) {
-            tokenPool = saved;
-        }
-    } catch (e) {}
-    updateTokenCountBadge();
-    renderTokenListUI();
+function openUserProfileModal(e) {
+    if (e) e.stopPropagation();
+    pushSlide('slideTokens');
+    fetchUserProfile();
 }
 
-function saveTokenPool() {
-    localStorage.setItem(LS_TOKEN_POOL_KEY, JSON.stringify(tokenPool));
-    updateTokenCountBadge();
-    renderTokenListUI();
-}
-
-function updateTokenCountBadge() {
-    const badge = document.getElementById("tokCountBadge");
-    if (badge) badge.textContent = String(tokenPool.length);
-}
-
-function ensureUserTokenInPool(userObj) {
-    if (!userObj || !userObj.token) return;
-    const exists = tokenPool.some(t => t.uid === userObj.uid || t.token === userObj.token);
-    if (!exists) {
-        tokenPool.push({
-            id: "tok_" + Math.random().toString(36).substring(2, 8),
-            label: userObj.label || `Account #${userObj.uid}`,
-            uid: userObj.uid,
-            token: userObj.token
-        });
-        saveTokenPool();
+function handleUserLogout(e) {
+    if (e) e.stopPropagation();
+    if (confirm("Kya aap sach mein RWA Portal se logout karna chahte hain?")) {
+        localStorage.removeItem('rwa_sky_tokens');
+        appState.tokens = [];
+        appState.currentUser = null;
+        alert("🔒 Successfully Logged Out!");
+        goHomeHub();
+        updateTokenBadge();
+        renderTokenList();
     }
 }
 
-function addNewToken() {
-    const label = (document.getElementById("newTokLabel")?.value || "").trim();
-    const uid   = (document.getElementById("newTokUid")?.value || "").trim() || "4756316";
-    const token = (document.getElementById("newTokValue")?.value || "").trim();
+async function fetchUserProfile() {
+    let currentTokObj = appState.tokens[appState.selectedTokenIndex] || appState.tokens[0];
+    if (!currentTokObj || !currentTokObj.token) return;
+
+    try {
+        // Fetching user details from RWA API endpoint as observed in logs
+        let res = await fetch(`https://backend.rojgarwithankit.co.in/get/get_user_dt?userid=${currentTokObj.uid || ''}`, {
+            headers: {
+                "Authorization": `Bearer ${currentTokObj.token}`,
+                "Content-Type": "application/json"
+            }
+        });
+        let data = await res.json();
+        if (data && data.data) {
+            appState.currentUser = data.data;
+            populateUserProfileUI(data.data);
+        } else {
+            // Fallback mock profile if token is offline/invalid
+            populateUserProfileUI({
+                name: "RWA Premium Student",
+                email: "student@rojgarwithankit.com",
+                phone: "+91 9876543210",
+                userid: currentTokObj.uid || "4756316",
+                state: "Uttar Pradesh",
+                district: "Noida",
+                category: "General",
+                gender: "Male"
+            });
+        }
+    } catch (err) {
+        console.log("Profile fetch error, loading local profile cache:", err);
+        populateUserProfileUI({
+            name: currentTokObj.label || "RWA Student",
+            email: "student@rwa.com",
+            phone: "+91 9876543210",
+            userid: currentTokObj.uid || "4756316",
+            state: "Delhi",
+            district: "New Delhi"
+        });
+    }
+}
+
+function populateUserProfileUI(user) {
+    let nameEl = document.getElementById('navUserName');
+    if (nameEl) nameEl.innerText = user.name || user.full_name || "Profile";
+
+    document.getElementById('profileName').innerText = user.name || user.full_name || "-";
+    document.getElementById('profileEmail').innerText = user.email || "-";
+    document.getElementById('profilePhone').innerText = user.phone || user.mobile || "-";
+    document.getElementById('profileUserId').innerText = user.userid || user.id || "-";
+    document.getElementById('profileStateDistrict').innerText = `${user.state || 'Delhi'}, ${user.district || 'New Delhi'}`;
+    document.getElementById('profileInfo').innerText = `${user.category || 'General'} | ${user.gender || 'Student'}`;
+}
+
+/* =========================================================
+   MULTI-TOKEN MANAGER
+   ========================================================= */
+function loadTokensFromStorage() {
+    let saved = localStorage.getItem('rwa_sky_tokens');
+    if (saved) {
+        try {
+            appState.tokens = JSON.parse(saved);
+        } catch (e) {}
+    }
+}
+
+function saveTokensToStorage() {
+    localStorage.setItem('rwa_sky_tokens', JSON.stringify(appState.tokens));
+    updateTokenBadge();
+    renderTokenList();
+}
+
+function updateTokenBadge() {
+    let badge = document.getElementById('tokCountBadge');
+    if (badge) badge.innerText = appState.tokens.length;
+}
+
+function openTokenSlide(e) {
+    if (e) e.stopPropagation();
+    pushSlide('slideTokens');
+    renderTokenList();
+}
+
+function addNewToken(e) {
+    if (e) e.stopPropagation();
+    let label = document.getElementById('newTokLabel').value.trim();
+    let uid = document.getElementById('newTokUid').value.trim();
+    let token = document.getElementById('newTokValue').value.trim();
 
     if (!token) {
-        alert("⚠️ Please paste a valid JWT Authorization token!");
+        alert("Kripya valid Bearer JWT Token enter karein!");
         return;
     }
 
-    tokenPool.push({
-        id: "tok_" + Math.random().toString(36).substring(2, 8),
-        label: label || `Account #${uid}`,
+    appState.tokens.push({
+        label: label || `Account ${appState.tokens.length + 1}`,
         uid: uid,
         token: token
     });
 
-    saveTokenPool();
-    document.getElementById("newTokLabel").value = "";
-    document.getElementById("newTokUid").value = "";
-    document.getElementById("newTokValue").value = "";
-    alert("✅ Token added successfully! Paid batches from all tokens will now be merged.");
+    saveTokensToStorage();
+    document.getElementById('newTokLabel').value = '';
+    document.getElementById('newTokUid').value = '';
+    document.getElementById('newTokValue').value = '';
+    alert("✅ New token successfully added and synced!");
 }
 
-function deleteToken(id) {
-    if (tokenPool.length <= 1) {
-        alert("⚠️ You must keep at least 1 token in the pool!");
+function deleteToken(index, e) {
+    if (e) e.stopPropagation();
+    if (appState.tokens.length <= 1) {
+        alert("Kam se kam 1 active token hona zaroori hai!");
         return;
     }
-    tokenPool = tokenPool.filter(t => t.id !== id);
-    saveTokenPool();
+    appState.tokens.splice(index, 1);
+    if (appState.selectedTokenIndex >= appState.tokens.length) {
+        appState.selectedTokenIndex = 0;
+    }
+    saveTokensToStorage();
 }
 
-function renderTokenListUI() {
-    const container = document.getElementById("tokenListContainer");
+function renderTokenList() {
+    let container = document.getElementById('tokenListContainer');
     if (!container) return;
-    container.innerHTML = "";
+    if (appState.tokens.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-600 font-bold p-3 bg-white rounded-xl">No active tokens found. Add one above.</div>`;
+        return;
+    }
 
-    tokenPool.forEach(t => {
-        const div = document.createElement("div");
-        div.className = "bg-white border border-sky-200 rounded-2xl p-3.5 flex flex-wrap justify-between items-center gap-3";
-        div.innerHTML = `
-            <div>
-                <div class="font-black text-sm text-slate-900">${t.label}</div>
-                <div class="text-[11px] text-slate-500 font-mono mt-0.5">UID: #${t.uid} • Token: ${t.token.substring(0, 20)}...</div>
+    let html = '';
+    appState.tokens.forEach((t, i) => {
+        let isSel = i === appState.selectedTokenIndex;
+        html += `
+            <div class="flex flex-wrap justify-between items-center gap-3 p-3.5 rounded-2xl bg-white border-2 ${isSel ? 'border-sky-500 shadow-md' : 'border-sky-200'}">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-black text-slate-900 text-sm">${t.label}</span>
+                        ${isSel ? '<span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-black uppercase">Active</span>' : ''}
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-mono mt-0.5">UID: ${t.uid || 'N/A'} | Token: ${t.token.substring(0, 20)}...</div>
+                </div>
+                <div class="flex gap-2">
+                    ${!isSel ? `<button onclick="switchActiveToken(${i}, event); event.stopPropagation();" class="btn-nav bg-emerald-600 text-white border-0 text-xs">Switch</button>` : ''}
+                    <button onclick="deleteToken(${i}, event); event.stopPropagation();" class="btn-nav bg-rose-600 text-white border-0 text-xs">Delete</button>
+                </div>
             </div>
-            <button onclick="deleteToken('${t.id}')" class="btn-nav bg-rose-600 text-white border-0 text-xs">🗑️ Remove</button>
         `;
-        container.appendChild(div);
     });
+    container.innerHTML = html;
 }
 
-function openTokenSlide() {
-    showOnlySlide("slideTokens");
-    renderTokenListUI();
+function switchActiveToken(index, e) {
+    if (e) e.stopPropagation();
+    appState.selectedTokenIndex = index;
+    saveTokensToStorage();
+    fetchUserProfile();
+    alert(`🔄 Switched to active account: ${appState.tokens[index].label}`);
+    renderTokenList();
 }
 
 /* =========================================================
-   3. BATCHES & TEST SERIES EXPLORER
+   EXPLORER & COURSE FETCHING LOGIC
    ========================================================= */
-function openExplorerSlide(mode) {
-    currentExplorerMode = mode;
-    showOnlySlide("slideExplorer");
+function openExplorerSlide(mode, e) {
+    if (e) e.stopPropagation();
+    appState.activeMode = mode;
+    pushSlide('slideExplorer');
 
-    const crumb = document.getElementById("crumbText");
-    const heading = document.getElementById("headingText");
-    const subTabs = document.getElementById("subTabs");
+    let heading = document.getElementById('headingText');
+    let crumb = document.getElementById('crumbText');
+    let subTabs = document.getElementById('subTabs');
 
-    if (subTabs) subTabs.classList.add("hidden");
-
-    if (mode === "paid") {
-        if (crumb) crumb.textContent = "Multi-Token Merged";
-        if (heading) heading.textContent = "🎓 Purchased Paid Batches";
-        loadPaidBatches();
-    } else if (mode === "free") {
-        if (crumb) crumb.textContent = "RWA Free Zone";
-        if (heading) heading.textContent = "🆓 Free Batches & Marathon Courses";
-        loadFreeBatches();
+    if (mode === 'paid') {
+        heading.innerText = "🎓 Paid Batches (Multi-Token Merged)";
+        crumb.innerText = "Paid Courses";
+        if (subTabs) subTabs.classList.add('hidden');
+        fetchPaidBatches();
+    } else if (mode === 'free') {
+        heading.innerText = "🆓 Free Batches & Revision Series";
+        crumb.innerText = "Free Courses";
+        if (subTabs) subTabs.classList.add('hidden');
+        fetchFreeBatches();
     }
 }
 
-function openTestSeriesExplorer(mode) {
-    currentExplorerMode = mode;
-    showOnlySlide("slideExplorer");
-
-    const crumb = document.getElementById("crumbText");
-    const heading = document.getElementById("headingText");
-    const subTabs = document.getElementById("subTabs");
-
-    if (subTabs) subTabs.classList.add("hidden");
-
-    if (mode === "paid_ts") {
-        if (crumb) crumb.textContent = "Official Series";
-        if (heading) heading.textContent = "🏆 Paid Exam Test Series";
-        loadTestSeriesList("paid");
-    } else if (mode === "free_ts") {
-        if (crumb) crumb.textContent = "Weekly Mock Tests";
-        if (heading) heading.textContent = "📝 Free Weekly Mock Test Series";
-        loadTestSeriesList("free");
-    }
-}
-
-async function loadPaidBatches() {
-    const grid = document.getElementById("mainGrid");
+async function fetchPaidBatches() {
+    let grid = document.getElementById('mainGrid');
     if (!grid) return;
-    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-600 font-extrabold animate-pulse">⏳ Fetching Paid Batches across all active tokens...</div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-10 font-bold text-sky-800">Loading paid batches from all synced tokens...</div>`;
 
-    let allBatches = [];
-
-    // Fetch from all tokens in pool
-    for (const t of tokenPool) {
+    let allCourses = [];
+    for (let i = 0; i < appState.tokens.length; i++) {
+        let tokObj = appState.tokens[i];
         try {
-            const res = await fetch(`https://rozgarapinew.teachx.in/get/get_my_course?userid=${t.uid}`, {
-                method: "GET",
-                headers: {
-                    "Client-Service": "Appx",
-                    "Auth-Key": "appxapi",
-                    "User-ID": t.uid,
-                    "Authorization": t.token
-                }
+            let res = await fetch(`https://backend.rojgarwithankit.co.in/get/my-courses`, {
+                headers: { "Authorization": `Bearer ${tokObj.token}` }
             });
-            const json = await res.json();
-            if (json && json.data && Array.isArray(json.data)) {
-                allBatches.push(...json.data);
+            let data = await res.json();
+            if (data && (data.data || data.courses)) {
+                let list = data.data || data.courses;
+                list.forEach(c => c._accountSource = tokObj.label);
+                allCourses = allCourses.concat(list);
             }
-        } catch (e) {}
+        } catch (err) {
+            console.log("Error fetching courses for token", tokObj.label, err);
+        }
     }
 
-    // Fallback Mock Paid Batches if API returns empty
-    if (allBatches.length === 0) {
-        allBatches = [
-            { courseid: "b_101", title: "RWA SSC CGL / CHSL 2026 Foundation Batch", thumbnail: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=500", price: "Paid", teacher: "Ankit Bhati & Team" },
-            { courseid: "b_102", title: "UP Police Constable Re-Exam Target Batch", thumbnail: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500", price: "Paid", teacher: "RWA Expert Faculty" },
-            { courseid: "b_103", title: "Railway NTPC & Group D 2026 Rankers Batch", thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500", price: "Paid", teacher: "Maths & GS Team" }
+    // Fallback sample mock courses if API network offline
+    if (allCourses.length === 0) {
+        allCourses = [
+            { id: 101, title: "UP Police Constable 2026 - Khaki Batch", instructor: "Ankit Bhati Sir", image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500", _accountSource: "Account 1" },
+            { id: 102, title: "SSC CGL / CHSL 2026 - Arjuna Batch", instructor: "RWA Expert Team", image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500", _accountSource: "Account 1" },
+            { id: 103, title: "Delhi Police Driver & Head Constable Batch", instructor: "Dharmsingh Sir", image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=500", _accountSource: "Account 2" }
         ];
     }
 
-    renderBatchCards(allBatches, "paid");
+    appState.coursesList = allCourses;
+    renderCoursesGrid(allCourses);
 }
 
-async function loadFreeBatches() {
-    const grid = document.getElementById("mainGrid");
+async function fetchFreeBatches() {
+    let grid = document.getElementById('mainGrid');
     if (!grid) return;
-    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-600 font-extrabold animate-pulse">⏳ Loading Free Courses...</div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-10 font-bold text-sky-800">Loading free batches...</div>`;
 
-    const freeBatches = [
-        { courseid: "f_201", title: "RWA Free Practice Marathon Series 2026", thumbnail: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=500", price: "Free", teacher: "RWA Top Educators" },
-        { courseid: "f_202", title: "Current Affairs Brahmastra Daily Classes", thumbnail: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=500", price: "Free", teacher: "Sonu Kumar Sir" },
-        { courseid: "f_203", title: "English & Vocabulary Booster Sessions", thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500", price: "Free", teacher: "English Team" }
+    // Free courses mock / API fetch
+    let freeList = [
+        { id: 201, title: "RWA Free Practice Set & Marathon 2026", instructor: "RWA Team", image: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=500" },
+        { id: 202, title: "Current Affairs & Static GK Daily Series", instructor: "Sonu Kumar", image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500" }
     ];
-
-    renderBatchCards(freeBatches, "free");
+    appState.coursesList = freeList;
+    renderCoursesGrid(freeList);
 }
 
-function renderBatchCards(batches, type) {
-    const grid = document.getElementById("mainGrid");
+function renderCoursesGrid(list) {
+    let grid = document.getElementById('mainGrid');
     if (!grid) return;
-    grid.innerHTML = "";
+    if (list.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-10 font-bold text-slate-700">No courses available.</div>`;
+        return;
+    }
 
-    batches.forEach(b => {
-        const card = document.createElement("div");
-        card.className = "sky-card overflow-hidden flex flex-col justify-between cursor-pointer";
-        card.onclick = () => openBatchSubjects(b);
-        card.innerHTML = `
-            <div>
-                <div class="relative h-40 bg-sky-200 overflow-hidden">
-                    <img src="${b.thumbnail || b.image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}" alt="Course" class="w-full h-full object-cover">
-                    <span class="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 text-white font-extrabold text-[10px] uppercase">${b.price || (type === 'paid' ? 'Purchased' : 'Free')}</span>
+    let html = '';
+    list.forEach(c => {
+        html += `
+            <div onclick="openCourseDetail(${c.id}, '${c.title.replace(/'/g, "")}', event); event.stopPropagation();" class="sky-card p-4 cursor-pointer flex flex-col justify-between">
+                <div>
+                    <div class="relative rounded-xl overflow-hidden aspect-video bg-sky-200 mb-3">
+                        <img src="${c.image || c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}" class="w-full h-full object-cover">
+                        ${c._accountSource ? `<span class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-amber-300 font-extrabold text-[10px]">${c._accountSource}</span>` : ''}
+                    </div>
+                    <h3 class="font-black text-base text-slate-900 line-clamp-2">${c.title}</h3>
+                    <p class="text-xs text-slate-600 font-medium mt-1">👨‍🏫 ${c.instructor || 'RWA Faculty'}</p>
                 </div>
-                <div class="p-4">
-                    <h3 class="font-black text-base text-slate-900 line-clamp-2">${b.title || b.coursename}</h3>
-                    <p class="text-xs text-slate-600 font-semibold mt-1">👨‍🏫 ${b.teacher || b.instructor || 'RWA Expert Faculty'}</p>
+                <div class="mt-4 pt-3 border-t border-sky-200 flex justify-between items-center">
+                    <span class="text-[11px] font-extrabold text-blue-700 uppercase">View Subjects ➔</span>
+                    <span class="px-2.5 py-1 rounded-xl bg-sky-100 text-sky-900 font-extrabold text-xs">Active</span>
                 </div>
-            </div>
-            <div class="p-4 pt-0">
-                <button class="w-full btn-watch py-2.5">📖 Open Course Subjects ➔</button>
             </div>
         `;
-        grid.appendChild(card);
     });
+    grid.innerHTML = html;
+}
+
+function filterGrid() {
+    let query = document.getElementById('searchBox').value.toLowerCase();
+    let filtered = appState.coursesList.filter(item => 
+        (item.title && item.title.toLowerCase().includes(query)) ||
+        (item.instructor && item.instructor.toLowerCase().includes(query))
+    );
+    renderCoursesGrid(filtered);
 }
 
 /* =========================================================
-   4. COURSE SUBJECTS, TOPICS & LECTURES EXPLORER
+   COURSE INTERNAL TABS (SUBJECTS, LIVE, TESTS, TELEGRAM)
    ========================================================= */
-async function openBatchSubjects(batchObj) {
-    activeBatchData = batchObj;
-    const crumb = document.getElementById("crumbText");
-    const heading = document.getElementById("headingText");
-    const subTabs = document.getElementById("subTabs");
+async function openCourseDetail(batchId, batchTitle, e) {
+    if (e) e.stopPropagation();
+    appState.currentBatchId = batchId;
+    appState.currentCourse = batchTitle;
+    pushSlide('slideExplorer');
 
-    if (crumb) crumb.textContent = batchObj.title || "Course";
-    if (heading) heading.textContent = batchObj.title || "Course Subjects";
-    if (subTabs) subTabs.classList.remove("hidden");
+    let heading = document.getElementById('headingText');
+    let crumb = document.getElementById('crumbText');
+    let subTabs = document.getElementById('subTabs');
 
-    loadCourseTab("subjects");
+    heading.innerText = batchTitle;
+    crumb.innerText = "Batch Subjects";
+    if (subTabs) subTabs.classList.remove('hidden');
+
+    loadCourseTab('subjects');
 }
 
-async function loadCourseTab(tabName) {
-    document.querySelectorAll(".tab-pill").forEach(el => el.classList.remove("active-pill"));
-    const activeTabBtn = document.getElementById(`sub_${tabName}`);
-    if (activeTabBtn) activeTabBtn.classList.add("active-pill");
+function loadCourseTab(tabName) {
+    appState.currentSubTab = tabName;
+    document.querySelectorAll('.tab-pill').forEach(p => p.classList.remove('active-pill'));
+    let activeBtn = document.getElementById(`sub_${tabName}`);
+    if (activeBtn) activeBtn.classList.add('active-pill');
 
-    const grid = document.getElementById("mainGrid");
+    if (tabName === 'subjects') fetchBatchSubjects();
+    else if (tabName === 'live') fetchBatchLiveClasses();
+    else if (tabName === 'tests') fetchBatchTests();
+    else if (tabName === 'telegram') openBatchTelegram();
+}
+
+async function fetchBatchSubjects() {
+    let grid = document.getElementById('mainGrid');
     if (!grid) return;
-    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-600 font-extrabold animate-pulse">⏳ Loading ${tabName}...</div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-10 font-bold text-sky-800">Loading subjects...</div>`;
 
-    if (tabName === "subjects") {
-        // Mock / API Subjects
-        const subjects = [
-            { subjectid: "sub_1", title: "Mathematics (गणित)", count: "45 Lectures", icon: "📐" },
-            { subjectid: "sub_2", title: "Reasoning (तर्कशक्ति)", count: "40 Lectures", icon: "🧠" },
-            { subjectid: "sub_3", title: "General Hindi (सामान्य हिंदी)", count: "35 Lectures", icon: "📖" },
-            { subjectid: "sub_4", title: "General Knowledge & GS", count: "60 Lectures", icon: "🌍" },
-            { subjectid: "sub_5", title: "Current Affairs & UP GK", count: "30 Lectures", icon: "⚡" }
-        ];
+    // Simulated / API fetch subjects
+    let subjects = [
+        { id: 1, title: "Mathematics (गणित)", count: "45 Classes", icon: "📐" },
+        { id: 2, title: "Reasoning (तर्कशक्ति)", count: "40 Classes", icon: "🧠" },
+        { id: 3, title: "Hindi (सामान्य हिंदी)", count: "38 Classes", icon: "📖" },
+        { id: 4, title: "General Knowledge & GS", count: "60 Classes", icon: "🌍" },
+        { id: 5, title: "Uttar Pradesh GK Special", count: "25 Classes", icon: "🏛️" }
+    ];
+    appState.subjectsList = subjects;
 
-        grid.innerHTML = "";
-        subjects.forEach(s => {
-            const card = document.createElement("div");
-            card.className = "sky-card p-5 flex items-center justify-between cursor-pointer";
-            card.onclick = () => openSubjectTopics(s);
-            card.innerHTML = `
+    let html = '';
+    subjects.forEach(s => {
+        html += `
+            <div onclick="openSubjectTopics(${s.id}, '${s.title}', event); event.stopPropagation();" class="sky-card p-5 cursor-pointer flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white text-2xl flex items-center justify-center shadow-md">${s.icon}</div>
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-2xl shadow-md">${s.icon}</div>
                     <div>
                         <h4 class="font-black text-base text-slate-900">${s.title}</h4>
-                        <span class="text-xs font-bold text-sky-700">${s.count}</span>
+                        <p class="text-xs text-slate-600 font-bold mt-0.5">📚 ${s.count}</p>
                     </div>
                 </div>
-                <div class="text-blue-600 font-black text-lg">➔</div>
-            `;
-            grid.appendChild(card);
-        });
-    } else if (tabName === "live") {
-        grid.innerHTML = `
-            <div class="col-span-full sky-card p-6 text-center">
-                <div class="text-3xl mb-2">🔴</div>
-                <h3 class="font-black text-lg text-slate-900">No Live Classes Right Now</h3>
-                <p class="text-xs text-slate-600 mt-1">Upcoming live classes and marathon sessions will appear here as per schedule.</p>
+                <span class="text-xs font-extrabold text-blue-700">Open ➔</span>
             </div>
         `;
-    } else if (tabName === "tests") {
-        grid.innerHTML = `
-            <div class="col-span-full sky-card p-6 text-center">
-                <div class="text-3xl mb-2">📝</div>
-                <h3 class="font-black text-lg text-slate-900">Batch Practice Tests</h3>
-                <p class="text-xs text-slate-600 mt-1">Chapter-wise tests and quizzes are available in the Official Test Series section.</p>
-                <button onclick="openTestSeriesExplorer('paid_ts')" class="mt-3 btn-nav bg-indigo-600 text-white border-0">🏆 Open Paid Test Series</button>
-            </div>
-        `;
-    } else if (tabName === "telegram") {
-        grid.innerHTML = `
-            <div class="col-span-full sky-card p-6 text-center">
-                <div class="text-3xl mb-2">✈️</div>
-                <h3 class="font-black text-lg text-slate-900">RWA Official Doubt & Study Group</h3>
-                <p class="text-xs text-slate-600 mt-1">Connect with mentors and fellow aspirants for doubt clearing.</p>
-                <a href="https://t.me/" target="_blank" class="inline-block mt-3 btn-nav bg-sky-600 text-white border-0 no-underline">Join Telegram Channel ➔</a>
-            </div>
-        `;
-    }
+    });
+    grid.innerHTML = html;
 }
 
-async function openSubjectTopics(subjObj) {
-    activeSubjectData = subjObj;
-    const crumb = document.getElementById("crumbText");
-    if (crumb) crumb.textContent = `${activeBatchData?.title || 'Course'} › ${subjObj.title}`;
+async function openSubjectTopics(subjectId, subjectTitle, e) {
+    if (e) e.stopPropagation();
+    appState.currentSubjectId = subjectId;
 
-    const grid = document.getElementById("mainGrid");
-    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-600 font-extrabold animate-pulse">⏳ Loading Lectures & PDFs...</div>`;
+    let heading = document.getElementById('headingText');
+    let crumb = document.getElementById('crumbText');
+    heading.innerText = subjectTitle;
+    crumb.innerText = "Topics / Chapters";
 
-    // Mock Lectures list with Video stream URL and PDFs
-    const lectures = [
-        { 
-            id: "lec_1", 
-            title: "Lecture 01: Number System & Basic Fundamentals (संख्या पद्धति)", 
-            duration: "1h 15m", 
-            videoUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-            pdf1Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            pdf2Url: ""
-        },
-        { 
-            id: "lec_2", 
-            title: "Lecture 02: Simplification & Shortcut Tricks (सरलीकरण)", 
-            duration: "1h 05m", 
-            videoUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-            pdf1Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            pdf2Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-        },
-        { 
-            id: "lec_3", 
-            title: "Lecture 03: Percentage & Profit Loss (प्रतिशत एवं लाभ-हानि)", 
-            duration: "1h 30m", 
-            videoUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-            pdf1Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            pdf2Url: ""
-        }
+    let grid = document.getElementById('mainGrid');
+    grid.innerHTML = `<div class="col-span-full text-center py-10 font-bold text-sky-800">Loading topics...</div>`;
+
+    let topics = [
+        { id: 1, title: "Chapter 1: Number System & Simplification", count: "8 Lessons | 2 PDFs" },
+        { id: 2, title: "Chapter 2: Percentage & Profit Loss", count: "10 Lessons | 2 PDFs" },
+        { id: 3, title: "Chapter 3: Ratio, Proportion & Partnership", count: "7 Lessons | 1 PDF" },
+        { id: 4, title: "Chapter 4: Time, Speed & Distance", count: "9 Lessons | 2 PDFs" }
     ];
+    appState.topicsList = topics;
 
-    grid.innerHTML = "";
-    lectures.forEach((lec, idx) => {
-        const card = document.createElement("div");
-        card.className = "sky-card p-5 flex flex-col justify-between gap-4";
-        card.innerHTML = `
-            <div>
-                <span class="text-[10px] font-black text-sky-700 uppercase">Lecture ${idx + 1} • ⏱️ ${lec.duration}</span>
-                <h4 class="font-black text-base text-slate-900 mt-1">${lec.title}</h4>
-            </div>
-            <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-sky-200">
-                <button onclick="launchLecturePlayer('${lec.videoUrl}', '${lec.title.replace(/'/g, "\\'")}', '${lec.pdf1Url || ''}', '${lec.pdf2Url || ''}')" class="btn-watch text-xs">▶️ Watch Video</button>
-                ${lec.pdf1Url ? `<button onclick="openStandalonePdf('${lec.pdf1Url}', '${lec.title} - Notes PDF')" class="btn-nav bg-emerald-600 text-white border-0 text-xs">📄 Notes PDF</button>` : ''}
+    let html = '';
+    topics.forEach(t => {
+        html += `
+            <div onclick="openTopicLessons(${t.id}, '${t.title}', event); event.stopPropagation();" class="sky-card p-5 cursor-pointer flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-black text-sky-700 uppercase">Topic Module</span>
+                    <h4 class="font-black text-base text-slate-900 mt-0.5">${t.title}</h4>
+                    <p class="text-xs text-slate-600 font-bold mt-1">▶ ${t.count}</p>
+                </div>
+                <span class="text-xs font-extrabold text-blue-700">Watch ➔</span>
             </div>
         `;
-        grid.appendChild(card);
     });
+    grid.innerHTML = html;
+}
+
+async function openTopicLessons(topicId, topicTitle, e) {
+    if (e) e.stopPropagation();
+    appState.currentTopicId = topicId;
+
+    let lessons = [
+        { 
+            id: 1, 
+            title: `${topicTitle} - Class 01 (Concept + Shortcut Tricks)`, 
+            videoUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+            pdf1: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+            pdf2: ""
+        },
+        { 
+            id: 2, 
+            title: `${topicTitle} - Class 02 (Important Practice Questions)`, 
+            videoUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+            pdf1: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+            pdf2: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        }
+    ];
+    appState.lessonsList = lessons;
+
+    // Open player slide with first lesson
+    openPlayerWithLesson(lessons[0]);
 }
 
 /* =========================================================
-   5. LAUNCH PLAYER & INLINE PDF VIEWER
+   PLAYER & NEXT CLASSES INTEGRATION
    ========================================================= */
-let activeLecPdf1 = "";
-let activeLecPdf2 = "";
+function openPlayerWithLesson(lesson) {
+    appState.currentLesson = lesson;
+    pushSlide('slidePlayer');
 
-function launchLecturePlayer(videoUrl, title, pdf1, pdf2) {
-    showOnlySlide("slidePlayer");
-    const navNav = document.getElementById("topHeaderNav");
-    if (navNav) navNav.classList.add("hidden"); // Clean Full view
-
-    activeLecPdf1 = pdf1;
-    activeLecPdf2 = pdf2;
-
-    // Show/Hide PDF 1 & PDF 2 buttons in player controls
-    const pdfBtn1 = document.getElementById("playerPdf1");
-    const pdfBtn2 = document.getElementById("playerPdf2");
-
-    if (pdfBtn1) {
-        if (pdf1) pdfBtn1.classList.remove("hidden");
-        else pdfBtn1.classList.add("hidden");
-    }
-    if (pdfBtn2) {
-        if (pdf2) pdfBtn2.classList.remove("hidden");
-        else pdfBtn2.classList.add("hidden");
+    // Load video
+    if (lesson.videoUrl.includes('youtube.com') || lesson.videoUrl.includes('youtu.be')) {
+        loadYouTubeSource(lesson.videoUrl, lesson.title);
+    } else {
+        loadVideoSource(lesson.videoUrl, lesson.title);
     }
 
-    // Default below player: show Next Classes
+    // Configure PDF 1 & PDF 2 buttons
+    let btnPdf1 = document.getElementById('playerPdf1');
+    let btnPdf2 = document.getElementById('playerPdf2');
+
+    if (lesson.pdf1) {
+        btnPdf1.classList.remove('hidden');
+    } else {
+        btnPdf1.classList.add('hidden');
+    }
+
+    if (lesson.pdf2) {
+        btnPdf2.classList.remove('hidden');
+    } else {
+        btnPdf2.classList.add('hidden');
+    }
+
+    // Ensure bottom section shows Next Classes by default
     switchBottomToNextClasses();
+    renderNextClasses();
+}
 
-    // Play video
-    if (typeof playStreamUrl === "function") {
-        playStreamUrl(videoUrl, title);
+function closePlayerBox(e) {
+    if (e) e.stopPropagation();
+    if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
     }
+    if (video) video.pause();
+    handleGlobalBack();
 }
 
-function closePlayerBox() {
-    if (typeof stopHlsVideo === "function") stopHlsVideo();
-    const navNav = document.getElementById("topHeaderNav");
-    if (navNav) navNav.classList.remove("hidden");
-    showOnlySlide("slideExplorer");
-}
+function renderNextClasses() {
+    let grid = document.getElementById('nextClassesGrid');
+    let countEl = document.getElementById('nextClassesCount');
+    if (!grid) return;
 
-function switchBottomToNextClasses() {
-    const nextBox = document.getElementById("nextClassesBox");
-    const pdfBox  = document.getElementById("inlinePdfBox");
-    if (nextBox) nextBox.classList.remove("hidden");
-    if (pdfBox)  pdfBox.classList.add("hidden");
+    let list = appState.lessonsList || [];
+    if (countEl) countEl.innerText = `${list.length} Classes`;
 
-    // Populate dummy next classes
-    const nextGrid = document.getElementById("nextClassesGrid");
-    const nextCount = document.getElementById("nextClassesCount");
-    if (nextCount) nextCount.textContent = "3 Classes";
-    if (nextGrid) {
-        nextGrid.innerHTML = `
-            <div class="bg-white border border-sky-200 rounded-xl p-3 cursor-pointer hover:border-blue-500" onclick="alert('Playing next lecture...')">
-                <span class="text-[10px] font-black text-sky-700 uppercase">Up Next • 1h 20m</span>
-                <h5 class="font-extrabold text-sm text-slate-900 mt-0.5">Ratio & Proportion (अनुपात एवं समानुपात)</h5>
-            </div>
-            <div class="bg-white border border-sky-200 rounded-xl p-3 cursor-pointer hover:border-blue-500" onclick="alert('Playing next lecture...')">
-                <span class="text-[10px] font-black text-sky-700 uppercase">Upcoming • 1h 10m</span>
-                <h5 class="font-extrabold text-sm text-slate-900 mt-0.5">Percentage Advance Level Questions</h5>
-            </div>
-            <div class="bg-white border border-sky-200 rounded-xl p-3 cursor-pointer hover:border-blue-500" onclick="alert('Playing next lecture...')">
-                <span class="text-[10px] font-black text-sky-700 uppercase">Upcoming • 1h 30m</span>
-                <h5 class="font-extrabold text-sm text-slate-900 mt-0.5">Compound & Simple Interest Masterclass</h5>
+    let html = '';
+    list.forEach(l => {
+        let isCurrent = appState.currentLesson && appState.currentLesson.id === l.id;
+        html += `
+            <div onclick='openPlayerWithLesson(${JSON.stringify(l)}); event.stopPropagation();' class="p-3.5 rounded-2xl bg-white border-2 ${isCurrent ? 'border-sky-500 shadow-md' : 'border-sky-200'} cursor-pointer flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-black text-sky-700 uppercase">${isCurrent ? '▶ Now Playing' : 'Up Next'}</span>
+                    <h5 class="font-extrabold text-sm text-slate-900 mt-0.5 line-clamp-1">${l.title}</h5>
+                </div>
+                <span class="text-xs font-bold text-blue-600">▶ Play</span>
             </div>
         `;
-    }
+    });
+    grid.innerHTML = html;
 }
 
-function openActivePlayerPdf(pdfIndex) {
-    const pdfUrl = pdfIndex === 1 ? activeLecPdf1 : activeLecPdf2;
+/* =========================================================
+   INLINE & STANDALONE PDF VIEWER
+   ========================================================= */
+function openActivePlayerPdf(pdfIndex, e) {
+    if (e) e.stopPropagation();
+    let lesson = appState.currentLesson;
+    if (!lesson) return;
+
+    let pdfUrl = pdfIndex === 1 ? lesson.pdf1 : lesson.pdf2;
     if (!pdfUrl) {
-        alert("⚠️ PDF document not attached for this button.");
+        alert("Ye PDF available nahi hai!");
         return;
     }
 
-    const nextBox = document.getElementById("nextClassesBox");
-    const pdfBox  = document.getElementById("inlinePdfBox");
-    const frame   = document.getElementById("inlinePdfFrame");
-    const title   = document.getElementById("inlinePdfTitle");
-    const rawLink = document.getElementById("inlineRawPdfLink");
+    let nextBox = document.getElementById('nextClassesBox');
+    let pdfBox = document.getElementById('inlinePdfBox');
+    let frame = document.getElementById('inlinePdfFrame');
+    let rawLink = document.getElementById('inlineRawPdfLink');
+    let titleEl = document.getElementById('inlinePdfTitle');
 
-    if (nextBox) nextBox.classList.add("hidden");
-    if (pdfBox)  pdfBox.classList.remove("hidden");
-    if (title)   title.textContent = `📄 Class Notes PDF ${pdfIndex}`;
+    if (nextBox) nextBox.classList.add('hidden');
+    if (pdfBox) pdfBox.classList.remove('hidden');
+
+    if (titleEl) titleEl.innerText = `📄 ${lesson.title} - Notes PDF ${pdfIndex}`;
     if (rawLink) rawLink.href = pdfUrl;
-
-    setInlinePdfMode('appx');
+    if (frame) frame.src = `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
 }
 
-function setInlinePdfMode(mode) {
-    const frame = document.getElementById("inlinePdfFrame");
-    const pdfUrl = document.getElementById("inlineRawPdfLink")?.href || "";
-    if (!frame || !pdfUrl) return;
+function switchBottomToNextClasses(e) {
+    if (e) e.stopPropagation();
+    let nextBox = document.getElementById('nextClassesBox');
+    let pdfBox = document.getElementById('inlinePdfBox');
 
-    if (mode === "appx") {
-        frame.src = `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    if (nextBox) nextBox.classList.remove('hidden');
+    if (pdfBox) pdfBox.classList.add('hidden');
+}
+
+function setInlinePdfMode(mode, e) {
+    if (e) e.stopPropagation();
+    let lesson = appState.currentLesson;
+    if (!lesson) return;
+    let pdfUrl = lesson.pdf1;
+    let frame = document.getElementById('inlinePdfFrame');
+    if (!frame) return;
+
+    if (mode === 'appx') {
+        frame.src = pdfUrl;
     } else {
-        frame.src = `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(pdfUrl)}`;
+        frame.src = `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
     }
 }
 
-/* =========================================================
-   6. STANDALONE PDF VIEWER SLIDE
-   ========================================================= */
-function openStandalonePdf(pdfUrl, titleText) {
-    showOnlySlide("slidePdf");
-    const title = document.getElementById("pdfTitle");
-    const rawLink = document.getElementById("rawPdfLink");
-    if (title) title.textContent = titleText || "PDF Document";
-    if (rawLink) rawLink.href = pdfUrl;
-    setPdfMode("appx");
+function closePdfSlide(e) {
+    if (e) e.stopPropagation();
+    handleGlobalBack();
 }
 
-function setPdfMode(mode) {
-    const frame = document.getElementById("pdfFrame");
-    const pdfUrl = document.getElementById("rawPdfLink")?.href || "";
-    if (!frame || !pdfUrl) return;
+/* =========================================================
+   TEST SERIES EXPLORER & LIVE CBT EXAM ENGINE
+   ========================================================= */
+function openTestSeriesExplorer(type, e) {
+    if (e) e.stopPropagation();
+    appState.activeMode = type;
+    pushSlide('slideExplorer');
 
-    if (mode === "appx") {
-        frame.src = `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    let heading = document.getElementById('headingText');
+    let crumb = document.getElementById('crumbText');
+    let subTabs = document.getElementById('subTabs');
+
+    if (subTabs) subTabs.classList.add('hidden');
+
+    if (type === 'paid_ts') {
+        heading.innerText = "🏆 Official Paid Test Series (SSC, Police, NDA)";
+        crumb.innerText = "Paid Test Series";
     } else {
-        frame.src = `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(pdfUrl)}`;
+        heading.innerText = "📝 Free Weekly Mock Tests (All Exams)";
+        crumb.innerText = "Free Test Series";
     }
+
+    fetchTestSeriesList(type);
 }
 
-function closePdfSlide() {
-    showOnlySlide("slideExplorer");
-}
-
-/* =========================================================
-   7. LIVE CBT TEST SERIES & SOLUTIONS ENGINE (WITH KOKILA HINDI FONT)
-   ========================================================= */
-function loadTestSeriesList(mode) {
-    const grid = document.getElementById("mainGrid");
+async function fetchTestSeriesList(type) {
+    let grid = document.getElementById('mainGrid');
     if (!grid) return;
-    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-600 font-extrabold animate-pulse">⏳ Loading CBT Test Series...</div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-10 font-bold text-sky-800">Loading test series...</div>`;
 
-    const testSeries = [
-        {
-            testid: "ts_1",
-            title: "UP Police Constable Full Mock Test 01 (Hindi/English)",
-            questionsCount: 50,
-            durationMins: 60,
-            badge: mode === "paid" ? "Official Paid Series" : "Free Weekly Mock",
-            questions: generateMockCbtQuestions()
-        },
-        {
-            testid: "ts_2",
-            title: "SSC CGL Tier-1 Full Length CBT Mock Test 05",
-            questionsCount: 50,
-            durationMins: 60,
-            badge: mode === "paid" ? "Official Paid Series" : "Free Weekly Mock",
-            questions: generateMockCbtQuestions()
-        }
+    let tests = [
+        { id: 501, title: "UP Police Constable Full Length CBT Mock Test 01", questions: 150, time: "120 Mins", marks: "300 Marks" },
+        { id: 502, title: "SSC CGL Tier-1 All India Mock Test 2026", questions: 100, time: "60 Mins", marks: "200 Marks" },
+        { id: 503, title: "Delhi Police Head Constable Practice Test 02", questions: 100, time: "90 Mins", marks: "100 Marks" }
     ];
 
-    grid.innerHTML = "";
-    testSeries.forEach(ts => {
-        const card = document.createElement("div");
-        card.className = "sky-card p-5 flex flex-col justify-between gap-4";
-        card.innerHTML = `
-            <div>
-                <span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-900 font-black text-[10px] uppercase">${ts.badge}</span>
-                <h3 class="font-black text-lg text-slate-900 mt-2">${ts.title}</h3>
-                <p class="text-xs text-slate-600 font-semibold mt-1">⏱️ Duration: ${ts.durationMins} Minutes • ❓ Total Questions: ${ts.questionsCount}</p>
+    let html = '';
+    tests.forEach(t => {
+        html += `
+            <div onclick="startCbtTest(${t.id}, '${t.title}', event); event.stopPropagation();" class="sky-card p-5 cursor-pointer flex flex-col justify-between">
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-black text-[10px] uppercase">CBT MOCK EXAM</span>
+                    <h3 class="font-black text-base text-slate-900 mt-2">${t.title}</h3>
+                    <div class="flex gap-3 text-xs text-slate-600 font-bold mt-2">
+                        <span>❓ ${t.questions} Qs</span>
+                        <span>⏱️ ${t.time}</span>
+                        <span>⭐ ${t.marks}</span>
+                    </div>
+                </div>
+                <div class="mt-5 pt-3 border-t border-sky-200 flex justify-between items-center">
+                    <span class="text-xs font-black text-indigo-700 uppercase">Attempt Test ➔</span>
+                    <span class="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-900 font-extrabold text-xs">Start Now</span>
+                </div>
             </div>
-            <button onclick='launchCbtTest(${JSON.stringify(ts).replace(/'/g, "&#39;")})' class="btn-watch py-2.5">🚀 Start CBT Mock Test ➔</button>
         `;
-        grid.appendChild(card);
     });
+    grid.innerHTML = html;
 }
 
-function generateMockCbtQuestions() {
-    return [
+function startCbtTest(testId, testTitle, e) {
+    if (e) e.stopPropagation();
+    appState.cbtTestId = testId;
+    appState.cbtSubmitted = false;
+    appState.cbtCurrentQIndex = 0;
+    appState.cbtAnswers = {};
+    appState.cbtTimerSeconds = 3600;
+
+    document.getElementById('cbtTestTitle').innerText = testTitle;
+    document.getElementById('cbtResultCard').classList.add('hidden');
+    document.getElementById('cbtSubmitBtn').classList.remove('hidden');
+
+    // Generate sample Kokila Hindi & English rich questions
+    appState.cbtQuestions = [
         {
-            qno: 1,
-            questionHtml: `<span class="kokila-hindi">यदि किसी संख्या का 20%, 120 है, तो उस संख्या का 120% क्या होगा?</span><br>If 20% of a number is 120, what is 120% of that number?`,
-            options: ["600", "720", "800", "750"],
-            correctOption: 1, // 720 (index 1)
-            solutionHtml: `<span class="kokila-hindi">माना संख्या x है। x का 20% = 120 => x * (20/100) = 120 => x = 600. अब 600 का 120% = 600 * (120/100) = 720. अतः सही उत्तर विकल्प (B) है।</span>`
+            id: 1,
+            question: "यदि किसी संख्या का 40%, 80 के बराबर है, तो वह संख्या क्या होगी? <br><span class='text-sm text-slate-600'>If 40% of a number is equal to 80, what is the number?</span>",
+            options: ["150", "200", "250", "300"],
+            correct: 1,
+            solution: "माना संख्या x है। <br> x * (40 / 100) = 80 <br> x = (80 * 100) / 40 = 200. <br> अतः सही उत्तर विकल्प 2 (200) है।"
         },
         {
-            qno: 2,
-            questionHtml: `<span class="kokila-hindi">उत्तर प्रदेश की राजधानी लखनऊ किस नदी के तट पर स्थित है?</span><br>On the banks of which river is Lucknow, the capital of Uttar Pradesh, located?`,
-            options: ["गंगा (Ganga)", "गोमती (Gomti)", "यमुना (Yamuna)", "सरयू (Saryu)"],
-            correctOption: 1, // Gomti (index 1)
-            solutionHtml: `<span class="kokila-hindi">लखनऊ गोमती नदी के तट पर स्थित है। सही उत्तर विकल्प (B) है।</span>`
+            id: 2,
+            question: "भारत की प्रथम महिला प्रधानमंत्री कौन थीं? <br><span class='text-sm text-slate-600'>Who was the first female Prime Minister of India?</span>",
+            options: ["Sarojini Naidu", "Indira Gandhi", "Pratibha Patil", "Meira Kumar"],
+            correct: 1,
+            solution: "इंदिरा गांधी भारत की प्रथम महिला प्रधानमंत्री थीं।"
         },
         {
-            qno: 3,
-            questionHtml: `<span class="kokila-hindi">भारतीय संविधान में मौलिक अधिकार किस देश के संविधान से लिए गए हैं?</span><br>From which country's constitution were the Fundamental Rights borrowed in the Indian Constitution?`,
-            options: ["ब्रिटेन (Britain)", "संযুক্ত राज्य अमेरिका (USA)", "आयरलैंड (Ireland)", "रूस (Russia)"],
-            correctOption: 1, // USA (index 1)
-            solutionHtml: `<span class="kokila-hindi">भारतीय संविधान में मौलिक अधिकार यूएसए (USA) के संविधान से लिए गए हैं। सही उत्तर विकल्प (B) है।</span>`
+            id: 3,
+            question: "UP Police Headquarter kahan sthit hai? <br><span class='text-sm text-slate-600'>Where is the UP Police Headquarter located?</span>",
+            options: ["Lucknow", "Noida", "Prayagraj", "Kanpur"],
+            correct: 0,
+            solution: "उत्तर प्रदेश पुलिस मुख्यालय लखनऊ (Lucknow) में स्थित है।"
         }
     ];
-}
 
-function launchCbtTest(testObj) {
-    currentTestObj = testObj;
-    cbtQuestionsList = testObj.questions || generateMockCbtQuestions();
-    cbtUserAnswers = {};
-    cbtVisitedState = { 0: true };
-    cbtCurrentQIdx = 0;
-    cbtIsSubmitted = false;
-    cbtTimerSeconds = (testObj.durationMins || 60) * 60;
-
-    showOnlySlide("slideTestAttempt");
-
-    const titleEl = document.getElementById("cbtTestTitle");
-    if (titleEl) titleEl.textContent = testObj.title;
-
-    const badgeEl = document.getElementById("cbtSeriesBadge");
-    if (badgeEl) badgeEl.textContent = testObj.badge || "LIVE CBT EXAM";
-
-    // Hide result card
-    document.getElementById("cbtResultCard")?.classList.add("hidden");
-    document.getElementById("cbtSolutionBox")?.classList.add("hidden");
-    document.getElementById("cbtSubmitBtn")?.classList.remove("hidden");
-
+    pushSlide('slideTestAttempt');
     renderCbtQuestion();
-    renderCbtPalette();
     startCbtTimer();
 }
 
 function startCbtTimer() {
-    if (cbtTimerInterval) clearInterval(cbtTimerInterval);
-    const timerBadge = document.getElementById("cbtTimerBadge");
+    if (appState.cbtTimerInterval) clearInterval(appState.cbtTimerInterval);
+    let timerEl = document.getElementById('cbtTimerBadge');
 
-    cbtTimerInterval = setInterval(() => {
-        if (cbtIsSubmitted) {
-            clearInterval(cbtTimerInterval);
+    appState.cbtTimerInterval = setInterval(() => {
+        if (appState.cbtTimerSeconds <= 0 || appState.cbtSubmitted) {
+            clearInterval(appState.cbtTimerInterval);
+            if (!appState.cbtSubmitted) submitCbtTest();
             return;
         }
-        cbtTimerSeconds--;
-        if (cbtTimerSeconds <= 0) {
-            clearInterval(cbtTimerInterval);
-            submitCbtTest();
-            return;
-        }
-        const m = Math.floor(cbtTimerSeconds / 60);
-        const s = cbtTimerSeconds % 60;
-        if (timerBadge) {
-            timerBadge.textContent = `⏱️ ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-        }
+        appState.cbtTimerSeconds--;
+        let m = Math.floor(appState.cbtTimerSeconds / 60);
+        let s = appState.cbtTimerSeconds % 60;
+        if (timerEl) timerEl.innerText = `⏱️ ${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
     }, 1000);
 }
 
 function renderCbtQuestion() {
-    const q = cbtQuestionsList[cbtCurrentQIdx];
+    let q = appState.cbtQuestions[appState.cbtCurrentQIndex];
     if (!q) return;
 
-    cbtVisitedState[cbtCurrentQIdx] = true;
+    document.getElementById('cbtQNumber').innerText = `Question ${appState.cbtCurrentQIndex + 1} of ${appState.cbtQuestions.length}`;
+    document.getElementById('cbtQuestionHtml').innerHTML = q.question;
 
-    const qNum = document.getElementById("cbtQNumber");
-    const qHtml = document.getElementById("cbtQuestionHtml");
-    const optList = document.getElementById("cbtOptionsList");
+    let selectedOpt = appState.cbtAnswers[appState.cbtCurrentQIndex];
+    let optHtml = '';
+    q.options.forEach((opt, idx) => {
+        let isSel = selectedOpt === idx;
+        let isCorrectSol = appState.cbtSubmitted && q.correct === idx;
+        let isWrongSol = appState.cbtSubmitted && isSel && q.correct !== idx;
 
-    if (qNum) qNum.textContent = `Question ${cbtCurrentQIdx + 1} of ${cbtQuestionsList.length}`;
-    if (qHtml) qHtml.innerHTML = q.questionHtml;
+        let btnClass = "bg-white border-2 border-sky-200 text-slate-900";
+        if (isCorrectSol) btnClass = "bg-emerald-100 border-2 border-emerald-500 text-emerald-950 font-extrabold";
+        else if (isWrongSol) btnClass = "bg-rose-100 border-2 border-rose-500 text-rose-950 font-extrabold";
+        else if (isSel) btnClass = "bg-sky-600 text-white border-2 border-sky-600 font-extrabold";
 
-    if (optList) {
-        optList.innerHTML = "";
-        q.options.forEach((optText, oIdx) => {
-            const isSelected = cbtUserAnswers[cbtCurrentQIdx] === oIdx;
-            const div = document.createElement("div");
-            div.className = `p-3.5 rounded-2xl border-2 cursor-pointer font-bold text-sm transition-all flex items-center gap-3 ${
-                isSelected 
-                    ? 'bg-blue-600 text-white border-blue-700 shadow-md' 
-                    : 'bg-white text-slate-900 border-sky-200 hover:border-blue-400'
-            }`;
-            div.onclick = () => selectCbtOption(oIdx);
-            div.innerHTML = `
-                <span class="w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-black ${isSelected ? 'bg-white text-blue-700' : 'bg-sky-100 text-sky-900'}">${String.fromCharCode(65 + oIdx)}</span>
-                <span class="flex-1">${optText}</span>
-            `;
-            optList.appendChild(div);
-        });
-    }
+        optHtml += `
+            <div onclick="selectCbtOption(${idx}, event); event.stopPropagation();" class="p-3.5 rounded-xl cursor-pointer flex items-center gap-3 transition-all ${btnClass}">
+                <span class="w-7 h-7 rounded-lg bg-sky-100 text-sky-900 font-black flex items-center justify-center text-xs shrink-0">${String.fromCharCode(65 + idx)}</span>
+                <span class="text-sm font-medium">${opt}</span>
+            </div>
+        `;
+    });
+    document.getElementById('cbtOptionsList').innerHTML = optHtml;
 
-    // Render Solution box if submitted
-    const solBox = document.getElementById("cbtSolutionBox");
-    const solHtml = document.getElementById("cbtSolutionHtml");
-    if (cbtIsSubmitted) {
-        if (solBox) solBox.classList.remove("hidden");
-        if (solHtml) solHtml.innerHTML = q.solutionHtml || "No detailed solution provided.";
+    // Render Solution if submitted
+    let solBox = document.getElementById('cbtSolutionBox');
+    let solHtml = document.getElementById('cbtSolutionHtml');
+    if (appState.cbtSubmitted) {
+        solBox.classList.remove('hidden');
+        solHtml.innerHTML = q.solution;
     } else {
-        if (solBox) solBox.classList.add("hidden");
+        solBox.classList.add('hidden');
     }
 
     renderCbtPalette();
 }
 
-function selectCbtOption(optIdx) {
-    if (cbtIsSubmitted) return; // Locked after submit
-    cbtUserAnswers[cbtCurrentQIdx] = optIdx;
+function selectCbtOption(idx, e) {
+    if (e) e.stopPropagation();
+    if (appState.cbtSubmitted) return; // Cannot change after submit
+    appState.cbtAnswers[appState.cbtCurrentQIndex] = idx;
     renderCbtQuestion();
 }
 
-function clearCbtResponse() {
-    if (cbtIsSubmitted) return;
-    delete cbtUserAnswers[cbtCurrentQIdx];
+function clearCbtResponse(e) {
+    if (e) e.stopPropagation();
+    if (appState.cbtSubmitted) return;
+    delete appState.cbtAnswers[appState.cbtCurrentQIndex];
     renderCbtQuestion();
 }
 
-function nextCbtQuestion() {
-    if (cbtCurrentQIdx < cbtQuestionsList.length - 1) {
-        cbtCurrentQIdx++;
+function nextCbtQuestion(e) {
+    if (e) e.stopPropagation();
+    if (appState.cbtCurrentQIndex < appState.cbtQuestions.length - 1) {
+        appState.cbtCurrentQIndex++;
         renderCbtQuestion();
     }
 }
 
-function prevCbtQuestion() {
-    if (cbtCurrentQIdx > 0) {
-        cbtCurrentQIdx--;
+function prevCbtQuestion(e) {
+    if (e) e.stopPropagation();
+    if (appState.cbtCurrentQIndex > 0) {
+        appState.cbtCurrentQIndex--;
         renderCbtQuestion();
     }
 }
 
 function renderCbtPalette() {
-    const paletteGrid = document.getElementById("cbtPaletteGrid");
-    if (!paletteGrid) return;
-    paletteGrid.innerHTML = "";
+    let palette = document.getElementById('cbtPaletteGrid');
+    if (!palette) return;
 
-    cbtQuestionsList.forEach((_, idx) => {
-        const isAnswered = cbtUserAnswers[idx] !== undefined;
-        const isCurrent = cbtCurrentQIdx === idx;
-        const isVisited = cbtVisitedState[idx];
+    let html = '';
+    appState.cbtQuestions.forEach((q, idx) => {
+        let isAns = appState.cbtAnswers[idx] !== undefined;
+        let isCurr = appState.cbtCurrentQIndex === idx;
+        let isCorrectResult = appState.cbtSubmitted && appState.cbtAnswers[idx] === q.correct;
+        let isWrongResult = appState.cbtSubmitted && appState.cbtAnswers[idx] !== undefined && appState.cbtAnswers[idx] !== q.correct;
 
-        let bgClass = "bg-slate-200 text-slate-700 border-slate-300";
-        if (cbtIsSubmitted) {
-            const userAns = cbtUserAnswers[idx];
-            const correctAns = cbtQuestionsList[idx].correctOption;
-            if (userAns === correctAns) bgClass = "bg-emerald-500 text-white border-emerald-600";
-            else if (userAns !== undefined) bgClass = "bg-rose-500 text-white border-rose-600";
-            else bgClass = "bg-slate-300 text-slate-600 border-slate-400";
-        } else {
-            if (isAnswered) bgClass = "bg-emerald-600 text-white border-emerald-700 shadow-sm";
-            else if (isVisited) bgClass = "bg-amber-100 text-amber-900 border-amber-300";
-        }
+        let bgClass = "bg-slate-200 text-slate-800";
+        if (isCorrectResult) bgClass = "bg-emerald-500 text-white";
+        else if (isWrongResult) bgClass = "bg-rose-500 text-white";
+        else if (isAns) bgClass = "bg-emerald-500 text-white";
+        if (isCurr) bgClass += " ring-4 ring-sky-400";
 
-        const btn = document.createElement("button");
-        btn.className = `h-10 rounded-xl font-black text-xs border-2 transition-all flex items-center justify-center ${bgClass} ${isCurrent ? 'ring-2 ring-blue-600 ring-offset-2' : ''}`;
-        btn.textContent = String(idx + 1);
-        btn.onclick = () => {
-            cbtCurrentQIdx = idx;
-            renderCbtQuestion();
-        };
-        paletteGrid.appendChild(btn);
+        html += `
+            <button onclick="jumpCbtQuestion(${idx}, event); event.stopPropagation();" class="w-10 h-10 rounded-xl font-black text-xs border-0 cursor-pointer ${bgClass}">
+                ${idx + 1}
+            </button>
+        `;
     });
+    palette.innerHTML = html;
 }
 
-function submitCbtTest() {
-    if (!cbtIsSubmitted) {
-        if (!confirm("Are you sure you want to submit this CBT Test?")) return;
-    }
+function jumpCbtQuestion(idx, e) {
+    if (e) e.stopPropagation();
+    appState.cbtCurrentQIndex = idx;
+    renderCbtQuestion();
+}
 
-    cbtIsSubmitted = true;
-    if (cbtTimerInterval) clearInterval(cbtTimerInterval);
+function submitCbtTest(e) {
+    if (e) e.stopPropagation();
+    if (!appState.cbtSubmitted && !confirm("Kya aap apna CBT Mock Test submit karna chahte hain?")) return;
 
-    let correct = 0;
-    let wrong = 0;
-    let skipped = 0;
+    appState.cbtSubmitted = true;
+    if (appState.cbtTimerInterval) clearInterval(appState.cbtTimerInterval);
 
-    cbtQuestionsList.forEach((q, idx) => {
-        const ans = cbtUserAnswers[idx];
-        if (ans === undefined) {
-            skipped++;
-        } else if (ans === q.correctOption) {
-            correct++;
-        } else {
-            wrong++;
-        }
+    let correctCount = 0;
+    let wrongCount = 0;
+    let skipCount = 0;
+
+    appState.cbtQuestions.forEach((q, idx) => {
+        let ans = appState.cbtAnswers[idx];
+        if (ans === undefined) skipCount++;
+        else if (ans === q.correct) correctCount++;
+        else wrongCount++;
     });
 
-    const totalScore = (correct * 2.0) - (wrong * 0.5);
-    const maxScore = cbtQuestionsList.length * 2.0;
+    let totalMarks = (correctCount * 2) - (wrongCount * 0.5);
 
-    // Show Result card
-    document.getElementById("cbtResultCard")?.classList.remove("hidden");
-    document.getElementById("cbtSubmitBtn")?.classList.add("hidden");
+    document.getElementById('cbtResultCard').classList.remove('hidden');
+    document.getElementById('cbtSubmitBtn').classList.add('hidden');
+    document.getElementById('cbtFinalScoreText').innerText = `Score: ${totalMarks} / ${appState.cbtQuestions.length * 2}`;
+    document.getElementById('cbtStatCorrect').innerText = `✅ Correct: ${correctCount}`;
+    document.getElementById('cbtStatWrong').innerText = `❌ Wrong: ${wrongCount}`;
+    document.getElementById('cbtStatSkip').innerText = `⚪ Skipped: ${skipCount}`;
 
-    const scoreText = document.getElementById("cbtFinalScoreText");
-    const statCorrect = document.getElementById("cbtStatCorrect");
-    const statWrong = document.getElementById("cbtStatWrong");
-    const statSkip = document.getElementById("cbtStatSkip");
-
-    if (scoreText) scoreText.textContent = `Score: ${totalScore} / ${maxScore} Marks`;
-    if (statCorrect) statCorrect.textContent = `✅ Correct: ${correct}`;
-    if (statWrong) statWrong.textContent = `❌ Wrong: ${wrong}`;
-    if (statSkip) statSkip.textContent = `⚪ Skipped: ${skipped}`;
-
-    renderCbtQuestion(); // Renders solution boxes for review
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    renderCbtQuestion();
 }
 
-function reAttemptCbtTest() {
-    if (currentTestObj) {
-        launchCbtTest(currentTestObj);
-    }
+function reAttemptCbtTest(e) {
+    if (e) e.stopPropagation();
+    appState.cbtSubmitted = false;
+    appState.cbtAnswers = {};
+    appState.cbtCurrentQIndex = 0;
+    appState.cbtTimerSeconds = 3600;
+    document.getElementById('cbtResultCard').classList.add('hidden');
+    document.getElementById('cbtSubmitBtn').classList.remove('hidden');
+    renderCbtQuestion();
+    startCbtTimer();
 }
 
-function exitCbtTest() {
-    if (cbtTimerInterval) clearInterval(cbtTimerInterval);
-    showOnlySlide("slideExplorer");
+function exitCbtTest(e) {
+    if (e) e.stopPropagation();
+    if (appState.cbtTimerInterval) clearInterval(appState.cbtTimerInterval);
+    handleGlobalBack();
 }
-
-/* =========================================================
-   8. AUTO-INITIALIZE APP ON DOM READY
-   ========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
-    initTokenPool();
-});
