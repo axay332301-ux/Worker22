@@ -124,7 +124,7 @@
             <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </section>
 
-        <!-- SLIDE 3: PLAYER SECTION WITH TRANSPARENT OVERLAY CONTROLS -->
+        <!-- SLIDE 3: PLAYER SECTION -->
         <section id="slidePlayer" class="slide-page hidden-slide">
             <div class="player-sky-card max-w-5xl mx-auto">
                 <div id="playerHeaderBar" class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-3 border-b-2 border-sky-300/70">
@@ -140,7 +140,7 @@
                 <input id="url" type="hidden" value="">
 
                 <div class="w-full">
-                    <!-- Video Screen containing absolute overlay transparent controls -->
+                    <!-- Video Screen with Transparent Overlay Controls -->
                     <div id="hlsScreen" class="screen relative">
                         <div id="bufferLoader" class="buffer-overlay hidden">
                             <div class="spinner-ring"></div>
@@ -172,7 +172,7 @@
                             </div>
                         </div>
 
-                        <!-- YouTube-style Transparent Overlay Controls Bar -->
+                        <!-- Transparent Coaching-App Style Overlay Controls -->
                         <div id="playerControlsBar" class="controls">
                             <div class="seek-row">
                                 <input id="seek" class="seek" type="range" min="0" max="1000" value="0">
@@ -193,7 +193,7 @@
                                     <button id="pip" class="ctrl-btn" title="Picture in Picture">🖼️ PiP</button>
                                     <button id="download" class="ctrl-btn dl-btn" title="Download Video">⬇ Save</button>
                                     <button onclick="toggleSettingsMenu()" class="ctrl-btn sett-btn" title="Quality & Speed">⚙️ Settings</button>
-                                    <button id="fs" class="ctrl-btn" title="Fullscreen">⛶</button>
+                                    <button id="fs" class="ctrl-btn" title="Fullscreen">⛶ Full</button>
                                 </div>
                             </div>
                         </div>
