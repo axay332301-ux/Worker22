@@ -1,5 +1,5 @@
 // =========================================================
-// RWA ULTIMATE ASMANI SKY OTT PLAYER ENGINE (player.js)
+// RWA ULTIMATE ASMANI SKY OTT PLAYER ENGINE (player.js - FIXED)
 // =========================================================
 const PROXY = "https://proplayer.allswbatch22.workers.dev/stream?url=";
 const SEGMENT = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
@@ -41,11 +41,12 @@ function manifest(u) {
     const rawUrl = unwrapOriginalUrl(u);
     try {
         const x = new URL(rawUrl);
-        if (x.pathname.toLowerCase().includes(".m3u8") || x.hostname.includes("classx.co.in") || x.hostname.includes("akamai.net.in")) {
+        // Force route through Cloudflare Worker proxy for HLS streams to bypass CORS
+        if (x.pathname.toLowerCase().includes(".m3u8") || x.hostname.includes("classx.co.in") || x.hostname.includes("akamai.net.in") || x.hostname.includes("teachx.in")) {
             return PROXY + encodeURIComponent(rawUrl);
         }
     } catch {}
-    return rawUrl;
+    return PROXY + encodeURIComponent(rawUrl);
 }
 
 function segment(u) {
@@ -74,10 +75,9 @@ class BackendLoader extends Hls.DefaultConfig.loader {
 
         if (originalUrl.includes(".m3u8")) {
             ctx.url = PROXY + encodeURIComponent(originalUrl);
-        } else if (segment(originalUrl)) {
-            ctx.url = SEGMENT + encodeURIComponent(originalUrl);
         } else {
-            ctx.url = originalUrl;
+            // Route all segments and playlist chunks through proxy to avoid infinite buffering / CORS
+            ctx.url = SEGMENT + encodeURIComponent(originalUrl);
         }
 
         super.load(ctx, cfg, cb);
@@ -188,6 +188,8 @@ function start() {
                 showLoader(false);
                 if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
                     try { hls.recoverMediaError(); } catch {}
+                } else if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    try { hls.startLoad(); } catch {}
                 }
             }
         });
@@ -275,7 +277,6 @@ const playerControlsBar = document.getElementById("playerControlsBar");
 
 if (hlsScreen) {
     hlsScreen.addEventListener("click", (e) => {
-        // Prevent toggle if clicking directly on buttons or settings menu
         if (e.target.closest("button") || e.target.closest("input") || e.target.closest("#settingsMenu")) {
             return;
         }
@@ -385,11 +386,10 @@ const pipBtn = document.getElementById("pip");
 if (pipBtn) pipBtn.onclick = async () => {
     try {
         if (document.pictureInPictureElement) await document.exitPictureInPicture();
-        else if (v.requestFullscreen) await v.requestPictureInPicture();
+        else if (v.requestPictureInPicture) await v.requestPictureInPicture();
     } catch {}
 };
 
-// FULLSCREEN & MINIMIZE BUTTON LOGIC
 const fsBtn = document.getElementById("fs");
 const headerBar = document.getElementById("playerHeaderBar");
 
