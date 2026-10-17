@@ -385,7 +385,7 @@ const pipBtn = document.getElementById("pip");
 if (pipBtn) pipBtn.onclick = async () => {
     try {
         if (document.pictureInPictureElement) await document.exitPictureInPicture();
-        else if (v.requestPictureInPicture) await v.requestPictureInPicture();
+        else if (v.requestFullscreen) await v.requestPictureInPicture();
     } catch {}
 };
 
